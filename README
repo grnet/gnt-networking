@@ -1,0 +1,59 @@
+This source tree aims to provide networking funtionality for synnefo and
+Ganeti.
+
+Gather existing software components and introduce additions and modifications
+that take full advantage of the new network design and implementation of
+Ganeti.
+
+In general Ganeti and synnefo will support three main configurations for the
+VMs residing in the cluster:
+
+- VMs with public IPs whose packets are routed though their hosts
+using IP-less routing and proxy ARP. 
+
+- VMs with public IPs whose tap interfaces are bridged on a host interface.
+
+- VMs with private IPs whose tap interfaces are bridged on vlans and the host 
+acts as gateway and does the masqeurading needed for internet connection.
+
+- VMs with private IPs residing in the same ethernet collision domain.  
+
+
+
+
+GRNET's specific routed mode:
+
+
+* Proxy ARP: 
+
+* IP-less routing:
+
+
+Single bridge setup. Private IPs. Masquerade: 
+
+For security and not being able to change ip-mac-tap key: 
+# ebtables -t filter -D INPUT -i tap0 -j TAP0 
+# ebtables -t filter -D FORWARD -i tap0 -j TAP0
+# ebtables -t filter -X TAP0
+# ebtables -t filter -N TAP0 
+# ebtables -t filter -A TAP0 --ip-source \! 192.168.100.2 -p ipv4 -j DROP
+# ebtables -t filter -A TAP0 -s \! aa:00:00:8c:d3:a4 -j DROP 
+# ebtables -t filter -A INPUT -i tap0 -j TAP0 (for masquerading)
+# ebtables -t filter -A FORWARD -i tap0 -j TAP0 (for private lans)
+
+
+
+Private LANs: 
+
+- Create separete vlans on primary interface of every host.
+- Define new private network in Ganeti without gateway.
+- Bridge any tap interface belonging in the network.   
+- Trunk all vlans in cluster switch.
+
+
+
+nfdhcpd:
+
+* NFQUEUE
+
+* ferm 
