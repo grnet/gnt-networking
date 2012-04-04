@@ -1,0 +1,66 @@
+#!/bin/bash
+
+DIR=/var/lib/snf-network
+NETWORK=$1
+NODEGROUP=$2
+
+source /etc/default/snf-network
+
+if [ $# -ne 2 ]; then
+  echo "$0 <network> <nodegroup>"
+  exit 1
+fi
+
+NETWORK_FILE=$DIR/networks/$NETWORK
+NODEGROUP_FILE=$DIR/nodegoups/$NODEGROUP
+INTERFACES=$DIR/interfaces/$NETWORK-$NODEGROUP
+
+read x VLAN BRIDGE < $INTERFACES
+
+VLAN_ID=${VLAN#*:}
+
+source $NETWORK_FILE
+source $NODEGROUP_FILE
+
+if [ $MODE == "routed" ]; then 
+  if [ $TYPE == "public" ]; then
+    APR_IP=$(ipcalc $SUBNET | grep HostMax | awk '{print $2}')
+    ip rule del iif $VLAN table rt_$NAME
+
+    ip route del $SUBNET dev $VLAN table main 
+
+    ip route del $SUBNET dev $VLAN table rt_$NAME
+    ip route del default via $GATEWAY dev $VLAN table rt_$NAME
+
+    arptables -D OUTPUT -o $VLAN --opcode request -j mangle --mangle-ip-s  $ARP_IP 
+    ifdown -i $INTERFACES $VLAN
+    rm $INTERFACES
+  fi
+fi
+
+
+
+if [ $MODE == "bridged" ]; then
+  if [ $TYPE == "private" ]; then
+    VLAN_IDS="$VLAN_ID $PRIVATE_VLAN_IDS"
+    sed -i 's/PRIVATE_VLAN_IDS/ s/=.*/='"VLAN_IDS"'/' $NODEGROUP_FILE
+  fi
+
+  ip route del $SUBNET dev $BRIDGE table main
+
+  ip route del $SUBNET dev $BRIDGE table rt_$NETWORK
+  if [ ! -z $GATEWAY ]; then
+    ip route del default via $GATEWAY dev $BRIDGE table rt_$NETWORK
+    if [ $TYPE == "private" ]; then 
+      if [ ! -z $ROUTER ]; then 
+        if [ $(hostname) == $ROUTER ]; then
+          NETMASK=$(ipcalc $SUBNET | grep Netmask | awk '{print $4}')
+          ip addr del $GATEWAY/$NETMASK dev $LINK 
+          iptables -t nat -D POSTROUTING -s $SUBNET \! -d $SUBNET -j MASQUERADE
+        fi  
+      fi
+    fi
+  fi
+  ifdown -i $INTERFACES $BRIDGE
+  rm $INTERFACES
+fi

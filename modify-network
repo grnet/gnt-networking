@@ -1,0 +1,62 @@
+#!/bin/bash
+
+DIR=/var/lib/snf-network
+NEW_GATEWAY=$1
+NEW_TYPE=$2
+NETWORK=$3
+RT_TABLES=/etc/iproute2/rt_tables
+
+if [ $# -ne 3 ]; then
+  echo "$0 <gateway> <private/public> <name>"
+  exit 1
+fi
+
+source /etc/default/snf-network
+
+NETWORK_FILE=$DIR/networks/$NETWORK
+
+source $NETWORK_FILE
+
+OLD_GATEWAY=$GATEWAY
+OLD_TYPE=$TYPE
+
+INTERFACES=$(ls $DIR/interfaces/$NETWORK-*)
+
+
+for IFACES in $INTERFACES ; do
+  
+  NODEGROUP=$(echo $IFACES | sed 's/.*interfaces.*-//')
+  source $DIR/nodegroups/$NODEGROUP
+
+  read x VLAN MODE BRIDGE < $INTERFACES
+
+  if [ $MODE == "routed" ]; then 
+    if [ $TYPE == "public" ]; then
+      ip route replace default via $GATEWAY dev $VLAN table rt_$NETWORK
+    fi
+  fi
+
+  if [ $MODE == "bridged" ]; then
+    if [ ! -z $GATEWAY ]; then
+      ip route replace default via $GATEWAY dev $BRIDGE table rt_$NETWORK
+      if [ $TYPE == "private" ]; then 
+        if [ ! -z $ROUTER ]; then 
+          if [ $(hostname) == $ROUTER ]; then
+            NETMASK=$(ipcalc $SUBNET | grep Netmask | awk '{print $4}')
+            ip addr del $GATEWAY/$NETMASK dev $BRIDGE  
+            ip addr add $NEW_GATEWAY/$NETMASK dev $BRIDGE  
+          fi  
+        fi
+      fi
+    fi
+  fi
+
+  if [ ! -z $NEW_GATEWAY ]; then 
+    sed -i '/^GATEWAY/ s/=.*/='"$NEW_GATEWAY"'/' $NETWORK_FILE 
+  fi
+
+  if [ ! -z $NEW_TYPE ]; then
+    sed -i '/^TYPE/ s/=.*/='"$NEW_TYPE"'/' $NETWORK_FILE
+  fi 
+
+done

@@ -1,0 +1,33 @@
+#!/bin/bash
+
+DIR=/var/lib/snf-network
+SUBNET=$1
+GATEWAY=$2
+TYPE=$3
+NAME=$4
+RT_TABLES=/etc/iproute2/rt_tables
+
+
+
+if [ $# -ne 4 ]; then
+  echo "$0 <subnet> <gateway> <private/public> <name>"
+  exit 1
+fi
+
+
+
+cat > $DIR/networks/$NAME <<EOF
+SUBNET=$SUBNET
+GATEWAY=$GATEWAY
+TYPE=$TYPE
+EOF
+
+
+IDX=$(ls $DIR/networks | wc -l)
+
+# remove old entry
+sed -i '/^'"$IDX"'\ / d' $RT_TABLES
+
+echo "$IDX rt_$NAME" >> $RT_TABLES
+
+

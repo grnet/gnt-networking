@@ -32,15 +32,16 @@ GRNET's specific routed mode:
 Single bridge setup. Private IPs. Masquerade: 
 
 For security and not being able to change ip-mac-tap key: 
-# ebtables -t filter -D INPUT -i tap0 -j TAP0 
-# ebtables -t filter -D FORWARD -i tap0 -j TAP0
-# ebtables -t filter -X TAP0
-# ebtables -t filter -N TAP0 
-# ebtables -t filter -A TAP0 --ip-source \! 192.168.100.2 -p ipv4 -j DROP
-# ebtables -t filter -A TAP0 -s \! aa:00:00:8c:d3:a4 -j DROP 
-# ebtables -t filter -A INPUT -i tap0 -j TAP0 (for masquerading)
-# ebtables -t filter -A FORWARD -i tap0 -j TAP0 (for private lans)
-
+# ebtables -N FROMTAP0 
+# ebtables -A FROMTAP0 --ip-source \! 192.168.100.2 -p ipv4 -j DROP
+# ebtables -A FROMTAP0 -s \! aa:00:00:8c:d3:a4 -j DROP 
+# ebtables -A INPUT -i tap0 -j FROMTAP0 (for masquerading)
+# ebtables -A FORWARD -i tap0 -j FROMTAP0 (for private lans)
+# ebtables -N TOTAP0
+# ebtables -A FORWARD -o tap0 -j TOTAP0
+# ebtables -A OUTPUT -o tap0 -j TOTAP0
+# ebtables -A TOTAP0 -s 6e:10:e1:a0:c3:0f -j ACCEPT (from gateway)
+# ebtables -A TOTAP0 -s \! aa:0:0:8c:d3:a4/ff:ff:ff:ff:0:0 -j DROP 
 
 
 Private LANs: 

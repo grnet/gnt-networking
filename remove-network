@@ -1,0 +1,17 @@
+#!/bin/bash
+
+DIR=/var/lib/snf-network
+NAME=$1
+RT_TABLES=/etc/iproute2/rt_tables
+
+
+
+if [ $# -ne 1 ]; then
+  echo "$0 <name>"
+  exit 1
+fi
+
+# remove old entry
+sed -i '/rt_'"$NAME"'$/ d' $RT_TABLES
+
+rm $DIR/networks/$NAME 

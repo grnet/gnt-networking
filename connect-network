@@ -1,0 +1,99 @@
+#!/bin/bash
+
+DIR=/var/lib/snf-network
+NETWORK=$1
+NODEGROUP=$2
+MODE=$3
+LINK=$4
+
+source /etc/default/snf-network
+
+if [ $# -ne 4 ]; then
+  echo "$0 <network> <nodegroup> <mode> <link>"
+  exit 1
+fi
+
+NETWORK_FILE=$DIR/networks/$NETWORK
+NODEGROUP_FILE=$DIR/nodegoups/$NODEGROUP
+INTERFACES=$DIR/interfaces/$NETWORK-$NODEGROUP
+
+source $NETWORK_FILE
+source $NODEGROUP_FILE
+
+if [ $MODE == "routed" ]; then 
+  VLAN=$LINK
+  if [ $TYPE == "public" ]; then
+    APR_IP=$(ipcalc $SUBNET | grep HostMax | awk '{print $2}')
+    cat > $INTERFACES<<EOF
+# $VLAN $MODE
+auto $VLAN
+iface $VLAN inet manual
+#    ip-routing-table rt_$NETWORK
+#    ip-routes $SUBNET
+#    ip-gateway $GATEWAY
+#    ip-forwarding 1
+#    ip-proxy-arp 1
+#    arp-ip $ARP_IP
+EOF 
+    ifup -i $INTERFACES $VLAN
+    ip link set $VLAN up
+
+    ip rule add iif $VLAN table rt_$NAME
+
+    ip route add $SUBNET dev $VLAN table main 
+
+    ip route add $SUBNET dev $VLAN table rt_$NAME
+    ip route add default via $GATEWAY dev $VLAN table rt_$NAME
+    
+    echo 1 > /proc/sys/net/ipv4/conf/all/forwarding
+
+    arptables -A OUTPUT -o $VLAN --opcode request -j mangle --mangle-ip-s  $ARP_IP 
+  fi
+fi
+
+
+
+if [ $MODE == "bridged" ]; then
+  BRIDGE=$LINK
+  echo 1 > /proc/sys/net/ipv4/ip_forward
+  if [ $TYPE == "public" ]; then
+    VLAN=$INTERFACE.$PUBLIC_VLAN_ID
+  elif [ $TYPE == "private" ]; then
+    VLAN_ID=${PRIVATE_VLAN_IDS%% *}
+    VLAN_IDS=${PRIVATE_VLAN_IDS#* }
+    sed -i 's/PRIVATE_VLAN_IDS/ s/=.*/='"VLAN_IDS"'/' $NODEGROUP_FILE
+    #set -- $PRIVATE_VLAN_IDS
+    #VLAN=$1
+    #shift
+    #VLANS=$@
+    VLAN=$INTERFACE.$VLAN_ID
+  fi
+  cat > $INTERFACES <<EOF
+# $VLAN $MODE $BRIDGE
+auto $VLAN
+iface $VLAN inet manual
+
+auto $BRIDGE
+iface $BRIDGE inet manual
+  bridge_ports $VLAN
+  bridge_stp off
+  bridge_fd 2
+EOF
+  ifup -i $INTERFACES $BRIDGE
+  ip link set $VLAN up
+  ip route add $SUBNET dev $BRIDGE table main
+
+  ip route add $SUBNET dev $BRIDGE table rt_$NETWORK
+  if [ ! -z $GATEWAY ]; then
+    ip route add default via  dev $BRIDGE table rt_$NETWORK
+    if [ $TYPE == "private" ]; then 
+      if [ ! -z $ROUTER ]; then 
+        if [ $(hostname) == $ROUTER ]; then
+          NETMASK=$(ipcalc $SUBNET | grep Netmask | awk '{print $4}')
+          ip addr add $GATEWAY/$NETMASK dev $BRIDGE
+          iptables -t nat -A POSTROUTING -s $SUBNET \! -d $SUBNET -j MASQUERADE
+        fi  
+      fi
+    fi
+  fi
+fi

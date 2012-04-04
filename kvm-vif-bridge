@@ -1,0 +1,149 @@
+#!/bin/bash
+
+# This is an example of a Ganeti kvm ifup script that configures network
+# interfaces based on the initial deployment of the Okeanos project
+
+TAP_CONSTANT_MAC=cc:47:52:4e:45:54 # GRNET in hex :-)
+MAC2EUI64=/usr/bin/mac2eui64
+NFDHCPD_STATE_DIR=/var/lib/nfdhcpd
+
+function routed_setup_ipv4 {
+	# get the link's default gateway
+	gw=$(ip route list table $TABLE | sed -n 's/default via \([^ ]\+\).*/\1/p' | head -1)
+
+	# mangle ARPs to come from the gw's IP
+	arptables -D OUTPUT -o $INTERFACE --opcode request -j mangle >/dev/null 2>&1
+	arptables -A OUTPUT -o $INTERFACE --opcode request -j mangle --mangle-ip-s "$gw"
+
+	# route interface to the proper routing table
+	while ip rule del dev $INTERFACE; do :; done
+	ip rule add dev $INTERFACE table $TABLE
+
+	# static route mapping IP -> INTERFACE
+	ip route replace $IP proto static dev $INTERFACE table $TABLE
+
+	# Enable proxy ARP
+	echo 1 > /proc/sys/net/ipv4/conf/$INTERFACE/proxy_arp
+}
+
+function routed_setup_ipv6 {
+	# Add a routing entry for the eui-64
+	prefix=$(ip -6 route list table $TABLE | awk '/\/64/ {print $1; exit}')
+	uplink=$(ip -6 route list table $TABLE | sed -n 's/default via .* dev \([^ ]\+\).*/\1/p' | head -1)
+	eui64=$($MAC2EUI64 $MAC $prefix)
+
+	while ip -6 rule del dev $INTERFACE; do :; done
+	ip -6 rule add dev $INTERFACE table $TABLE
+	ip -6 ro replace $eui64/128 dev $INTERFACE table $TABLE
+	ip -6 neigh add proxy $eui64 dev $uplink
+
+	# disable proxy NDP since we're handling this on userspace
+	# this should be the default, but better safe than sorry
+	echo 0 > /proc/sys/net/ipv6/conf/$INTERFACE/proxy_ndp
+}
+
+# pick a firewall profile per NIC, based on tags (and apply it)
+function routed_setup_firewall {
+	ifprefix="synnefo:network:$INTERFACE_INDEX:"
+	for tag in $TAGS; do
+		case ${tag#$ifprefix} in
+		protected)
+			chain=protected
+		;;
+		unprotected)
+			chain=unprotected
+		;;
+		limited)
+			chain=limited
+		;;
+		esac
+	done
+
+	# Flush any old rules. We have to consider all chains, since
+	# we are not sure the instance was on the same chain, or had the same
+	# tap interface.
+	for oldchain in protected unprotected limited; do
+		iptables  -D FORWARD -o $INTERFACE -j $oldchain 2>/dev/null
+		ip6tables -D FORWARD -o $INTERFACE -j $oldchain 2>/dev/null
+	done
+
+	if [ "x$chain" != "x" ]; then
+		iptables  -A FORWARD -o $INTERFACE -j $chain
+		ip6tables -A FORWARD -o $INTERFACE -j $chain
+	fi
+}
+
+function routed_setup_nfdhcpd {
+	umask 022
+	cat >$NFDHCPD_STATE_DIR/$INTERFACE <<EOF
+IFACE=$1
+IP=$IP
+MAC=$MAC
+LINK=$TABLE
+HOSTNAME=$INSTANCE
+TAGS="$TAGS"
+EOF
+}
+
+function make_ebtables {
+  TAP=$INTERFACE
+  FROM=FROM${TAP^^}
+  TO=TO${TAP^^}
+  
+  ebtables -D INPUT -i $TAP -j $FROM
+  ebtables -D FORWARD -i $TAP -j $FROM
+  ebtables -D FORWARD -o $TAP -j $TO
+  ebtables -D OUTPUT -o $TAP -j $TO
+  
+  ebtables -X $FROM
+  ebtables -X $TO
+
+  ebtables -N $FROM
+  ebtables -A $FROM --ip-source \! $IP -p ipv4 -j DROP
+  ebtables -A $FROM -s \! $MAC -j DROP 
+  ebtables -A INPUT -i $TAP -j $FROM 
+  ebtables -A FORWARD -i $TAP -j $FROM 
+  ebtables -N $TO
+  ebtables -A FORWARD -o $TAP -j $TO
+  ebtables -A OUTPUT -o $TAP -j $TO
+  if [ $TYPE == "private" ]; then 
+    ebtables -A $TO -s \! $MAC/$MAC_MASK -j DROP 
+    if [ ! -z $GATEWAY ]; then 
+      ebtables -A $TO -s $ROUTER_MAC -j ACCEPT 
+    fi
+  fi
+}
+
+#FIXME: import router mac from the config files
+#       must know node group!! how???
+ROUTER_MAC=6e:10:e1:a0:c3:0f
+MAC_MASK=ff:ff:ff:0:0:0
+
+TABLE=rt_$NETWORK
+
+source /var/lib/snf-network/networks/$NETWORK
+
+
+if [ "$MODE" = "routed" ]; then
+	# special proxy-ARP/NDP routing mode
+
+	# use a constant predefined MAC address for the tap
+	ip link set $INTERFACE addr $TAP_CONSTANT_MAC
+	# bring the tap up
+	ifconfig $INTERFACE 0.0.0.0 up
+
+	# Drop unicast BOOTP/DHCP packets
+	iptables -D FORWARD -i $INTERFACE -p udp --dport 67 -j DROP 2>/dev/null
+	iptables -A FORWARD -i $INTERFACE -p udp --dport 67 -j DROP
+
+	routed_setup_ipv4
+	routed_setup_ipv6
+	routed_setup_firewall
+	routed_setup_nfdhcpd $INTERFACE
+elif [ "$MODE" = "bridged" ]; then
+  while ip rule del dev $INTERFACE; do :; done
+	ifconfig $INTERFACE 0.0.0.0 up
+	brctl addif $BRIDGE $INTERFACE
+	routed_setup_nfdhcpd $BRIDGE
+  make_ebtables
+fi   

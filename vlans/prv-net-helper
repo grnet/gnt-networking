@@ -1,0 +1,60 @@
+#!/bin/bash
+
+function usage {
+	echo "Usage: $0 <mode> <parent interface> <prv min> <prv max> <offset>"
+	exit 1
+}
+
+if [ $# -ne 5 ]; then
+	usage
+fi
+
+function up {
+	iface=$1
+	prv_min=$2
+	prv_max=$3
+	offset=$4
+
+	echo "Adding VLANs $2 - $3"
+	vconfig set_name_type DEV_PLUS_VID_NO_PAD
+	for prv in $(seq $prv_min $prv_max); do
+		vlan=$(($prv+$offset))
+		bridge=prv$prv
+
+		vconfig add $iface $vlan
+		ifconfig $iface.$vlan up
+		brctl addbr $bridge
+		brctl setfd $bridge 0
+		brctl addif $bridge $iface.$vlan # dev_plus_vid
+		ifconfig $bridge up
+	done
+}
+
+function down {
+	iface=$1
+	prv_min=$2
+	prv_max=$3
+	offset=$4
+
+	echo "Removing VLANs $2 - $3"
+	for prv in $(seq $prv_min $prv_max); do
+		vlan=$(($prv+$offset))
+		bridge=prv$prv
+
+		(
+		ifconfig $bridge down
+		brctl delif $bridge $iface.$vlan # dev_plus_vid
+		vconfig rem $iface.$vlan
+		brctl delbr $bridge
+		) 2>/dev/null
+	done
+}
+
+mode=$1; shift
+if [ "$mode" = "up" ]; then
+	up $@
+elif [ "$mode" = "down" ]; then
+	down $@
+else
+	usage
+fi
