@@ -1,0 +1,64 @@
+#!/bin/bash
+
+source /etc/default/snf-network
+
+HOSTNAME=$(hostname)
+
+
+INTERFACES=$SHAREDDIR/interfaces/$HOSTNAME
+INFRA=$SHAREDDIR/infra/$HOSTNAME
+
+if [ -e $INFRA ]; then
+  source $INFRA
+fi
+
+if [ -e /proc/sys/net/ipv4/conf/$PUBLIC_VLAN  -o \
+#     -e /proc/sys/net/ipv4/conf/$PUBLIC_BRIDGE -o \
+     -e /proc/sys/net/ipv4/conf/$MASQ_VLAN -o \
+     -e /proc/sys/net/ipv4/conf/$MASQ_BRIDGE -o \
+     -e /proc/sys/net/ipv4/conf/$PRIVATE_VLAN -o \
+     -e /proc/sys/net/ipv4/conf/$PRIVATE_BRIDGE ]; then 
+  echo Interfaces already exist! Please check: 
+  echo $PUBLIC_BRIDGE for bridging TAPs with public IPs
+  echo $PUBLIC_VLAN for routing TAPs with public IPs
+  echo $PRIVATE_VLAN  bridged on $PRIVATE_BRIDGE for private LANs
+  echo $MASQ_VLAN bridged on $MASQ_BRIDGE for private IPs that get MASQUERADED
+  exit 1
+fi
+
+
+cat > $INTERFACES<<EOF
+#auto $PUBLIC_BRIDGE
+#iface $PUBLIC_BRIDGE inet manual
+#  bridge_ports $PUBLIC_INTERFACE
+#  bridge_stp off
+#  bridge_fd 2
+
+auto $PUBLIC_VLAN
+iface $PUBLIC_VLAN inet manual
+
+auto $PRIVATE_VLAN
+iface $PRIVATE_VLAN inet manual
+
+auto $PRIVATE_BRIDGE
+iface $PRIVATE_BRIDGE inet manual
+  bridge_ports $PRIVATE_VLAN
+  bridge_stp off
+  bridge_fd 2
+
+auto $MASQ_VLAN
+iface $MASQ_VLAN inet manual
+
+auto $MASQ_BRIDGE
+iface $MASQ_BRIDGE inet manual
+  bridge_ports $MASQ_VLAN
+  bridge_stp off
+  bridge_fd 2
+EOF
+
+
+ifup -i $INTERFACES -a
+
+
+echo 1 > /proc/sys/net/ipv4/conf/all/forwarding
+echo 1 > /proc/sys/net/ipv4/ip_forward
