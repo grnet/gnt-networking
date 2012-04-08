@@ -130,14 +130,8 @@ def parse_routing_table(table="main", family=4):
     def_net = None
 
     for route in routes:
-        match = re.match(r'^default.*via ([^\s]+).*dev ([^\s]+)', route)
-        if match:
-            def_gw, def_dev = match.groups()
-            break
-
-    for route in routes:
         # Find the least-specific connected route
-        m = re.match("^([^\\s]+) dev %s" % def_dev, route)
+        m = re.match("^([\S]+/[\S]+) dev ([\S]+)", route)
         if not m:
             continue
 
@@ -145,13 +139,19 @@ def parse_routing_table(table="main", family=4):
             # Skip link-local declarations in "main" table
             continue
 
-        def_net = m.group(1)
+        def_net, def_dev = m.groups()
 
         try:
             def_net = IPy.IP(def_net)
         except ValueError, e:
             logging.warn("Unable to parse default route entry %s: %s",
                          def_net, str(e))
+
+    for route in routes:
+        match = re.match(r'^default.*via ([\S]+).*dev ([\S]+)', route)
+        if match:
+            def_gw, def_dev = match.groups()
+            break
 
     return Subnet(net=def_net, gw=def_gw, dev=def_dev)
 
@@ -379,6 +379,7 @@ class VMNetProxy(object): # pylint: disable=R0902
         """ Send a raw packet using a layer-2 socket
 
         """
+        logging.debug("%s", data)
         if isinstance(data, BasePacket):
             data = str(data)
 
@@ -527,7 +528,6 @@ class VMNetProxy(object): # pylint: disable=R0902
         mac = resp.chaddr[:hlen].encode("hex")
         mac, _ = re.subn(r'([0-9a-fA-F]{2})', r'\1:', mac, hlen-1)
 
-	logging.info("%s %s %s ", resp, hlen, mac)
         # Server responses are always BOOTREPLYs
         resp.op = "BOOTREPLY"
         del resp.payload
@@ -576,12 +576,13 @@ class VMNetProxy(object): # pylint: disable=R0902
             dhcp_options += [
                  ("hostname", binding.hostname),
                  ("domain", binding.hostname.split('.', 1)[-1]),
-                 ("router", subnet.gw),
                  ("broadcast_address", str(subnet.broadcast)),
                  ("subnet_mask", str(subnet.netmask)),
                  ("renewal_time", self.lease_renewal),
                  ("lease_time", self.lease_lifetime),
             ]
+            if subnet.gw:
+              dhcp_options += [("router", subnet.gw)]
             dhcp_options += [("name_server", x) for x in self.dhcp_nameservers]
 
         elif req_type == DHCPINFORM:
