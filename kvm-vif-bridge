@@ -85,7 +85,7 @@ TAGS="$TAGS"
 EOF
 }
 
-function make_ebtables {
+function reset_ebtables {
   TAP=$INTERFACE
   FROM=FROM${TAP^^}
   TO=TO${TAP^^}
@@ -97,6 +97,12 @@ function make_ebtables {
   
   ebtables -X $FROM
   ebtables -X $TO
+}
+
+function set_ebtables {
+  TAP=$INTERFACE
+  FROM=FROM${TAP^^}
+  TO=TO${TAP^^}
 
   ebtables -N $FROM
   ebtables -A $FROM --ip-source \! $IP -p ipv4 -j DROP
@@ -106,6 +112,8 @@ function make_ebtables {
   ebtables -N $TO
   ebtables -A FORWARD -o $TAP -j $TO
   ebtables -A OUTPUT -o $TAP -j $TO
+  #accept dhcp responses from host (nfdhcpd)
+  ebtables -A $TO -p ipv4 --ip-protocol=udp  --ip-destination-port=68 -j ACCEPT
   if [ $TYPE == "private" ]; then 
     ebtables -A $TO -s \! $MAC/$MAC_MASK -j DROP 
     if [ ! -z $GATEWAY ]; then 
@@ -140,10 +148,12 @@ if [ "$MODE" = "routed" ]; then
 	routed_setup_ipv6
 	routed_setup_firewall
 	routed_setup_nfdhcpd $INTERFACE
+  reset_ebtables
 elif [ "$MODE" = "bridged" ]; then
   while ip rule del dev $INTERFACE; do :; done
 	ifconfig $INTERFACE 0.0.0.0 up
 	brctl addif $BRIDGE $INTERFACE
 	routed_setup_nfdhcpd $BRIDGE
-  make_ebtables
+  reset_ebtables
+  set_ebtables
 fi   
