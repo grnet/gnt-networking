@@ -142,8 +142,6 @@ def parse_binding_file(path):
             ips = ip.split()
         elif line.startswith("MAC="):
             mac = line.strip().split("=")[1]
-        elif line.startswith("LINK="):
-            link = line.strip().split("=")[1]
         elif line.startswith("HOSTNAME="):
             hostname = line.strip().split("=")[1]
         elif line.startswith("IFACE="):
@@ -155,10 +153,10 @@ def parse_binding_file(path):
         elif line.startswith("SUBNET6="):
             subnet6 = line.strip().split("=")[1]
         elif line.startswith("GATEWAY6="):
-            gatewa6 = line.strip().split("=")[1]
+            gateway6 = line.strip().split("=")[1]
 
     return Client(ifname=ifname, mac=mac, ips=ips, link=link,
-                  hostname=hostname,iface=iface, subnet=subnet,
+                  hostname=hostname, iface=iface, subnet=subnet,
                   gateway=gateway, subnet6=subnet6, gateway6=gateway6 )
 
 class ClientFileHandler(pyinotify.ProcessEvent):
@@ -674,13 +672,9 @@ class VMNetProxy(object): # pylint: disable=R0902
         logging.debug("Sending out periodic RAs")
         start = time.time()
         i = 0
-        for client in self.clients.values():
-            iface = client.iface
-            ifmac = self.get_iface_hw_addr(iface)
-            if not ifmac:
-                continue
-
-            binding = self.clients[ifmac]
+        for binding in self.clients.values():
+            iface = binding.ifname
+            ifmac = binding.mac
             subnet = binding.net6
             if subnet.net is None:
                 logging.debug("Skipping periodic RA on interface %s,"

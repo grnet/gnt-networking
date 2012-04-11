@@ -1,6 +1,12 @@
 #!/bin/bash
 
-source /etc/default/snf-network
+DEFAULT=/etc/default/snf-network
+
+source $DEFAULT
+
+source $CONF
+
+NETWORK=$GANETI_NETWORK_NAME
 
 
 NETFILE=$SHAREDDIR/networks/$NETWORK
@@ -19,4 +25,4 @@ MAC_PREFIX=$GANETI_NETWORK_MAC_PREFIX
 TYPE=$GANETI_NETWORK_TYPE
 EOF
 
-
+sed -i 's/None//' $NETFILE

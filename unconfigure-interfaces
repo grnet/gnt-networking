@@ -1,16 +1,16 @@
 #!/bin/bash
 
-source /etc/default/snf-network
+DEFAULT=/etc/default/snf-network
+
+source $DEFAULT
+source $CONF
+source $INFRA
 
 HOSTNAME=$(hostname)
 
 
 INTERFACES=$SHAREDDIR/interfaces/$HOSTNAME
-INFRA=$SHAREDDIR/infra/$HOSTNAME
-
-if [ -e $INFRA ]; then
-  source $INFRA
-fi
+HOSTINFRA=$SHAREDDIR/infra/$HOSTNAME
 
 ifdown -i $INTERFACES -a --force
 

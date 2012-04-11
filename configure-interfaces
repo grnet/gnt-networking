@@ -1,15 +1,19 @@
 #!/bin/bash
 
-source /etc/default/snf-network
+DEFAULT=/etc/default/snf-network
+
+source $DEFAULT
+source $CONF
+source $INFRA
 
 HOSTNAME=$(hostname)
 
 
 INTERFACES=$SHAREDDIR/interfaces/$HOSTNAME
-INFRA=$SHAREDDIR/infra/$HOSTNAME
+HOSTINFRA=$SHAREDDIR/infra/$HOSTNAME
 
-if [ -e $INFRA ]; then
-  source $INFRA
+if [ -e "$HOSTINFRA" ]; then
+  source $HOSTINFRA
 fi
 
 if [ -e /proc/sys/net/ipv4/conf/$PUBLIC_VLAN  -o \
@@ -26,6 +30,9 @@ if [ -e /proc/sys/net/ipv4/conf/$PUBLIC_VLAN  -o \
   exit 1
 fi
 
+PUBLIC_MAC=$(ip link show $PUBLIC_INTERFACE | grep link/ether | awk '{print $2}')
+
+
 
 cat > $INTERFACES<<EOF
 #auto $PUBLIC_BRIDGE
@@ -33,6 +40,7 @@ cat > $INTERFACES<<EOF
 #  bridge_ports $PUBLIC_INTERFACE
 #  bridge_stp off
 #  bridge_fd 2
+#  post-up ip link set $PUBLIC_BRIDGE address $PUBLIC_MAC 
 
 auto $PUBLIC_VLAN
 iface $PUBLIC_VLAN inet manual
@@ -45,6 +53,7 @@ iface $PRIVATE_BRIDGE inet manual
   bridge_ports $PRIVATE_VLAN
   bridge_stp off
   bridge_fd 2
+  post-up ip link set $PRIVATE_BRIDGE address $PUBLIC_MAC 
 
 auto $MASQ_VLAN
 iface $MASQ_VLAN inet manual
@@ -54,6 +63,7 @@ iface $MASQ_BRIDGE inet manual
   bridge_ports $MASQ_VLAN
   bridge_stp off
   bridge_fd 2
+  post-up ip link set $MASQ_BRIDGE address $PUBLIC_MAC 
 EOF
 
 

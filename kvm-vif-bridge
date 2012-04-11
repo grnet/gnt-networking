@@ -7,8 +7,10 @@ TAP_CONSTANT_MAC=cc:47:52:4e:45:54 # GRNET in hex :-)
 MAC2EUI64=/usr/bin/mac2eui64
 NFDHCPD_STATE_DIR=/var/lib/nfdhcpd
 
+
+
 function clear_tap {
- 
+
  arptables -D OUTPUT -o $INTERFACE --opcode request -j mangle >/dev/null 2>&1
  while ip rule del dev $INTERFACE; do :; done
  iptables -D FORWARD -i $INTERFACE -p udp --dport 67 -j DROP 2>/dev/null
@@ -17,11 +19,9 @@ function clear_tap {
 }
 
 function routed_setup_ipv4 {
-	# get the link's default gateway
-	gw=$GATEWAY
 
 	# mangle ARPs to come from the gw's IP
-	arptables -A OUTPUT -o $INTERFACE --opcode request -j mangle --mangle-ip-s "$gw"
+	arptables -A OUTPUT -o $INTERFACE --opcode request -j mangle --mangle-ip-s    "$GATEWAY"
 
 	# route interface to the proper routing table
 	ip rule add dev $INTERFACE table $TABLE
@@ -83,24 +83,26 @@ function routed_setup_firewall {
 function setup_nfdhcpd {
 	umask 022
   FILE=$NFDHCPD_STATE_DIR/$INTERFACE
+  #IFACE is the interface from which the packet seems to arrive
+  #needed in bridged mode where the packets seems to arrive from the
+  #bridge and not from the tap
 	cat >$FILE <<EOF
 IFACE=$1
 IP=$IP
 MAC=$MAC
-LINK=$TABLE
 HOSTNAME=$INSTANCE
 TAGS="$TAGS"
 EOF
-if [ -n $GATEWAY ]; then
+if [ -n "$GATEWAY" ]; then
  echo GATEWAY=$GATEWAY >> $FILE
 fi
-if [ -n $SUBNET ]; then
+if [ -n "$SUBNET" ]; then
  echo SUBNET=$SUBNET >> $FILE
 fi
-if [ -n $GATEWAY6 ]; then
+if [ -n "$GATEWAY6" ]; then
  echo GATEWAY6=$GATEWAY6 >> $FILE
 fi
-if [ -n $SUBNET6 ]; then
+if [ -n "$SUBNET6" ]; then
  echo SUBNET6=$SUBNET6 >> $FILE
 fi
 
@@ -110,9 +112,9 @@ function clear_ebtables {
   TAP=$INTERFACE
   FROM=FROM${TAP^^}
   TO=TO${TAP^^}
-  
+
   exist=$(ebtables -L | grep $TAP)
-  
+
   if [ ! -z "$exist" ]; then
     ebtables -D INPUT -i $TAP -j $FROM
     ebtables -D FORWARD -i $TAP -j $FROM
@@ -132,31 +134,44 @@ function setup_ebtables {
   ebtables -N $FROM
   # do not allow changes in ip-mac pair
   ebtables -A $FROM --ip-source \! $IP -p ipv4 -j DROP
-  ebtables -A $FROM -s \! $MAC -j DROP 
-  ebtables -A FORWARD -i $TAP -j $FROM 
+  ebtables -A $FROM -s \! $MAC -j DROP
+  ebtables -A FORWARD -i $TAP -j $FROM
   ebtables -N $TO
   ebtables -A FORWARD -o $TAP -j $TO
   #accept dhcp responses from host (nfdhcpd)
   ebtables -A $TO -p ipv4 --ip-protocol=udp  --ip-destination-port=68 -j ACCEPT
-  if [ $TYPE == "private" ]; then 
-    if [ ! -z $GATEWAY ]; then 
+  if [ "$TYPE" == "private" ]; then
+    if [ ! -z "$GATEWAY" ]; then
       # allow packets from/to router (for masquerading
-      ebtables -A $TO -s $ROUTER_MAC -j ACCEPT 
-      ebtables -A INPUT -i $TAP -j $FROM 
+      ebtables -A $TO -s $ROUTER_MAC -j ACCEPT
+      ebtables -A INPUT -i $TAP -j $FROM
       ebtables -A OUTPUT -o $TAP -j $TO
     fi
-    # allow only packets from the same mac prefix 
-    ebtables -A $TO -s \! $MAC/$MAC_MASK -j DROP 
+    # allow only packets from the same mac prefix
+    ebtables -A $TO -s \! $MAC/$MAC_MASK -j DROP
   fi
 }
 
 
-TABLE=rt_$NETWORK
 
-source /var/lib/snf-network/networks/$NETWORK
+DEFAULT=/etc/default/snf-network
+source $DEFAULT
+source $CONF
 
+NODEINFRAFILE=$SHAREDDIR/infra/$(hostname)
+
+if [ -e "$NODEINFRAFILE" ]; then
+  source $NODEINFRAFILE
+fi
+
+
+NETFILE=$SHAREDDIR/networks/$NETWORK
+if [ -e "$NETFILE" ]; then
+  source $NETFILE
+fi
 
 if [ "$MODE" = "routed" ]; then
+  TABLE=rt_$NETWORK
 	# special proxy-ARP/NDP routing mode
   clear_tap
 	# use a constant predefined MAC address for the tap
@@ -179,4 +194,4 @@ elif [ "$MODE" = "bridged" ]; then
 	brctl addif $BRIDGE $INTERFACE
 	setup_nfdhcpd $BRIDGE
   setup_ebtables
-fi   
+fi

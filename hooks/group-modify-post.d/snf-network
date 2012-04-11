@@ -2,53 +2,51 @@
 
 source /etc/default/snf-network
 
-GROUP=$GANETI_GROUP_NAME
+source $CONF
 
+GROUP=$GANETI_GROUP_NAME
 ACTION=$GANETI_GROUP_NETWORK_ACTION
 NETWORK=$GANETI_GROUP_NETWORK_NAME
 MODE=$GANETI_GROUP_NETWORK_MODE
 LINK=$GANETI_GROUP_NETWORK_LINK
 
+HOSTNAME=$(hostname)
 
+NETFILE=$SHAREDDIR/networks/$NETWORK
+GROUPMAPFILE=$SHAREDDIR/mappings/$NETWORK-$GROUP
+NODEMAPFILE=$SHAREDDIR/mappings/$NETWORK-$HOSTNAME
+NODEINFRAFILE=$SHAREDDIR/infra/$HOSTNAME
 
-if [ -z $ACTION ]; then
+RT_TABLES=/etc/iproute2/rt_tables
+
+source $NODEINFRAFILE
+source $NETFILE
+
+if [ -z "$ACTION" ]; then
   exit 0
 fi
 
-NETFILE=$SHAREDDIR/networks/$NETWORK
 
-MAPFILE=$SHAREDDIR/mappings/$NETWORK-$GROUP
-
-function set_rt_table {
-  ID=$(sed  -n '/^$/ { =; q}' /etc/iproute2/rt_tables)
-  if [ -z $ID ]; then
-    ID=$(wc -l /etc/iproute2/rt_tables)
-    echo $((ID+1)) rt_$NETWORK > /etc/iproute2/rt_tables
-  else
-    sed -i '1,/^$/ s/^$/'"$ID"' rt_'"$NETWORK"'/' /etc/iproute2/rt_tables
-  fi
-}
-
-
-
-if [ $ACTION == "add" ]; then
-  if [ $MODE == "routed" ]; then 
+if [ "$ACTION" == "add" ]; then
+  if [ "$MODE" == "routed" ]; then 
     VLAN=$LINK
-    if [ $TYPE == "public" ]; then
+    TABLE=rt_$NETWORK
+    if [ "$TYPE" == "public" ]; then
       ARP_IP=$(ipcalc $SUBNET | grep HostMax | awk '{print $2}')
       
       ip link set $VLAN up
 
       echo 1 > "/proc/sys/net/ipv4/conf/$VLAN/proxy_arp"
 
-      set_rt_table
+      ID=$(wc -l < $RT_TABLES)
+      echo $((ID+1)) $TABLE >> $RT_TABLES
 
-      ip rule add iif $VLAN table rt_$NETWORK
+      ip rule add iif $VLAN table $TABLE
 
       ip route add $SUBNET dev $VLAN table main 
 
-      ip route add $SUBNET dev $VLAN table rt_$NETWORK
-      ip route add default via $GATEWAY dev $VLAN table rt_$NETWORK
+      ip route add $SUBNET dev $VLAN table $TABLE
+      ip route add default via $GATEWAY dev $VLAN table $TABLE
       
       echo 1 > /proc/sys/net/ipv4/conf/all/forwarding
 
@@ -58,11 +56,11 @@ if [ $ACTION == "add" ]; then
 
 
 
-  if [ $MODE == "bridged" ]; then
+  if [ "$MODE" == "bridged" ]; then
     BRIDGE=$LINK
-    if [ ! -z $GATEWAY ]; then
-      if [ $TYPE == "private" ]; then 
-        if [ $(hostname) == $ROUTER ]; then
+    if [ ! -z "$GATEWAY" ]; then
+      if [ "$TYPE" == "private" ]; then 
+        if [ "$HOSTNAME" == "$ROUTER" ]; then
           NETMASK=$(ipcalc $SUBNET | grep Netmask | awk '{print $4}')
           ip addr add $GATEWAY/$NETMASK dev $BRIDGE
           iptables -t nat -A POSTROUTING -s $SUBNET \! -d 192.168.0.0/16 -j MASQUERADE
@@ -71,19 +69,19 @@ if [ $ACTION == "add" ]; then
     fi
   fi
   
-  cat > $MAPFILE <<EOF
-MODE=$MODE
-LINK=$LINK
-EOF
+  ln -sf $GROUPMAPFILE $NODEMAPFILE
 
-else
+elif [ "$ACTION" == "remove" ]; then
+  if [ ! -e "$NODEMAPFILE" ]; then
+    exit 0;
+  fi
 
-  source $MAPFILE
+  source $NODEMAPFILE
 
   if [ "$MODE" == "routed" ]; then 
     VLAN=$LINK
     TABLE=rt_$NETWORK
-    if [ $TYPE == "public" ]; then
+    if [ "$TYPE" == "public" ]; then
       ARP_IP=$(ipcalc $SUBNET | grep HostMax | awk '{print $2}')
     
       arptables -D OUTPUT -o $VLAN --opcode request -j mangle --mangle-ip-s  $ARP_IP 
@@ -94,7 +92,8 @@ else
       ip route del $SUBNET dev $VLAN table main 
 
       ip rule del iif $VLAN table $TABLE
-      sed -i 's/.*'"$TABLE"'$//' /etc/iproute2/rt_tables
+      
+      sed -i 's/.*'"$TABLE"'$//' $RT_TABLES
     fi
   fi
 
@@ -102,9 +101,9 @@ else
 
   if [ "$MODE" == "bridged" ]; then
     BRIDGE=$LINK
-    if [ ! -z $GATEWAY ]; then
-      if [ $TYPE == "private" ]; then 
-        if [ $(hostname) == $ROUTER ]; then
+    if [ ! -z "$GATEWAY" ]; then
+      if [ "$TYPE" == "private" ]; then 
+        if [ "$HOSTNAME" == "$ROUTER" ]; then
           NETMASK=$(ipcalc $SUBNET | grep Netmask | awk '{print $4}')
           ip addr del $GATEWAY/$NETMASK dev $BRIDGE
           iptables -t nat -D POSTROUTING -s $SUBNET \! -d 192.168.0.0/16 -j MASQUERADE
@@ -113,6 +112,6 @@ else
     fi
   fi
   
-  rm $MAPFILE
+  rm $NODEMAPFILE
 
 fi

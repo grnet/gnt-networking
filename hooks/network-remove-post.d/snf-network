@@ -1,9 +1,15 @@
 #!/bin/bash
 
-source /etc/default/snf-network
+DEFAULT=/etc/default/snf-network
 
+source $DEFAULT 
+
+source $CONF
+
+NETWORK=$GANETI_NETWORK_NAME
 
 NETFILE=$SHAREDDIR/networks/$NETWORK
 
-rm $NETFILE
-
+if [ -e "$NETFILE" ]; then
+  rm $NETFILE
+fi
