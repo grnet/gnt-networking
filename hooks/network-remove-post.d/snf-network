@@ -1,0 +1,9 @@
+#!/bin/bash
+
+source /etc/default/snf-network
+
+
+NETFILE=$SHAREDDIR/networks/$NETWORK
+
+rm $NETFILE
+

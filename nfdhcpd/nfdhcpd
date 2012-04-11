@@ -116,46 +116,6 @@ DHCP_REQRESP = {
     }
 
 
-def parse_routing_table(table="main", family=4):
-    """ Parse the given routing table to get connected route, gateway and
-    default device.
-
-    """
-    ipro = subprocess.Popen(["ip", "-%d" % family, "ro", "ls",
-                             "table", table], stdout=subprocess.PIPE)
-    routes = ipro.stdout.readlines()
-
-    def_gw = None
-    def_dev = None
-    def_net = None
-
-    for route in routes:
-        # Find the least-specific connected route
-        m = re.match("^([\S]+/[\S]+) dev ([\S]+)", route)
-        if not m:
-            continue
-
-        if family == 6 and m.group(1).startswith("fe80:"):
-            # Skip link-local declarations in "main" table
-            continue
-
-        def_net, def_dev = m.groups()
-
-        try:
-            def_net = IPy.IP(def_net)
-        except ValueError, e:
-            logging.warn("Unable to parse default route entry %s: %s",
-                         def_net, str(e))
-
-    for route in routes:
-        match = re.match(r'^default.*via ([\S]+).*dev ([\S]+)', route)
-        if match:
-            def_gw, def_dev = match.groups()
-            break
-
-    return Subnet(net=def_net, gw=def_gw, dev=def_dev)
-
-
 def parse_binding_file(path):
     """ Read a client configuration from a tap file
 
@@ -171,6 +131,10 @@ def parse_binding_file(path):
     ips = None
     link = None
     hostname = None
+    subnet = None
+    gateway = None
+    subnet6 = None
+    gateway6 = None
 
     for line in iffile:
         if line.startswith("IP="):
@@ -184,9 +148,18 @@ def parse_binding_file(path):
             hostname = line.strip().split("=")[1]
         elif line.startswith("IFACE="):
             iface = line.strip().split("=")[1]
+        elif line.startswith("SUBNET="):
+            subnet = line.strip().split("=")[1]
+        elif line.startswith("GATEWAY="):
+            gateway = line.strip().split("=")[1]
+        elif line.startswith("SUBNET6="):
+            subnet6 = line.strip().split("=")[1]
+        elif line.startswith("GATEWAY6="):
+            gatewa6 = line.strip().split("=")[1]
 
-    return Client(ifname=ifname, mac=mac, ips=ips, link=link, hostname=hostname, iface=iface)
-
+    return Client(ifname=ifname, mac=mac, ips=ips, link=link,
+                  hostname=hostname,iface=iface, subnet=subnet,
+                  gateway=gateway, subnet6=subnet6, gateway6=gateway6 )
 
 class ClientFileHandler(pyinotify.ProcessEvent):
     def __init__(self, server):
@@ -211,13 +184,21 @@ class ClientFileHandler(pyinotify.ProcessEvent):
 
 
 class Client(object):
-    def __init__(self, ifname=None, mac=None, ips=None, link=None, hostname=None, iface=None):
+    def __init__(self, ifname=None, mac=None, ips=None, link=None,
+                 hostname=None, iface=None, subnet=None, gateway=None,
+                 subnet6=None, gateway6=None ):
         self.mac = mac
         self.ips = ips
         self.hostname = hostname
         self.link = link
         self.iface = iface
         self.ifname = ifname
+        self.subnet = subnet
+        self.gateway = gateway
+        self.net = Subnet(net=subnet, gw=gateway, dev=ifname)
+        self.subnet6 = subnet6
+        self.gateway6 = gateway6
+        self.net6 = Subnet(net=subnet6, gw=gateway6, dev=ifname)
 
     @property
     def ip(self):
@@ -318,9 +299,9 @@ class VMNetProxy(object): # pylint: disable=R0902
         self.ipv6_enabled = False
 
         self.clients = {}
-        self.subnets = {}
+        #self.subnets = {}
         self.ifaces = {}
-        self.v6nets = {}
+        #self.v6nets = {}
         self.nfq = {}
         self.l2socket = socket.socket(socket.AF_PACKET,
                                       socket.SOCK_RAW, ETH_P_ALL)
@@ -392,7 +373,6 @@ class VMNetProxy(object): # pylint: disable=R0902
 
     def build_config(self):
         self.clients.clear()
-        self.subnets.clear()
 
         for path in glob.glob(os.path.join(self.data_path, "*")):
             self.add_iface(path)
@@ -475,18 +455,13 @@ class VMNetProxy(object): # pylint: disable=R0902
         else:
             if binding.is_valid():
                 self.clients[binding.mac] = binding
-                self.subnets[binding.link] = parse_routing_table(binding.link)
                 logging.debug("Added client %s on %s", binding.hostname, iface)
                 self.ifaces[ifindex] = binding.iface
-                self.v6nets[iface] = parse_routing_table(binding.link, 6)
 
     def remove_iface(self, ifname):
         """ Cleanup clients on a removed interface
 
         """
-        if ifname in self.v6nets:
-            del self.v6nets[ifname]
-
         for mac in self.clients.keys():
             if self.clients[mac].ifname == ifname:
                 iface = self.client[mac].iface
@@ -546,7 +521,7 @@ class VMNetProxy(object): # pylint: disable=R0902
         resp = Ether(dst=mac, src=self.get_iface_hw_addr(iface))/\
                IP(src=DHCP_DUMMY_SERVER_IP, dst=binding.ip)/\
                UDP(sport=pkt.dport, dport=pkt.sport)/resp
-        subnet = self.subnets[binding.link]
+        subnet = binding.net
 
         if not DHCP in pkt:
             logging.warn("Invalid request from %s on %s, no DHCP"
@@ -627,7 +602,8 @@ class VMNetProxy(object): # pylint: disable=R0902
             return
 
         ifmac = self.get_iface_hw_addr(iface)
-        subnet = self.v6nets[iface]
+        binding = self.clients[ifmac]
+        subnet = binding.net6
         ifll = subnet.make_ll64(ifmac)
 
         # Signal the kernel that it shouldn't further process the packet
@@ -662,7 +638,8 @@ class VMNetProxy(object): # pylint: disable=R0902
             return
 
         ifmac = self.get_iface_hw_addr(iface)
-        subnet = self.v6nets[iface]
+        binding = self.clients[ifmac]
+        subnet = binding.net6
         ifll = subnet.make_ll64(ifmac)
 
         ns = IPv6(payload.get_data())
@@ -703,7 +680,8 @@ class VMNetProxy(object): # pylint: disable=R0902
             if not ifmac:
                 continue
 
-            subnet = self.v6nets[iface]
+            binding = self.clients[ifmac]
+            subnet = binding.net6
             if subnet.net is None:
                 logging.debug("Skipping periodic RA on interface %s,"
                               " as it is not IPv6-connected", iface)

@@ -18,7 +18,7 @@ function clear_tap {
 
 function routed_setup_ipv4 {
 	# get the link's default gateway
-	gw=$(ip route list table $TABLE | sed -n 's/default via \([^ ]\+\).*/\1/p' | head -1)
+	gw=$GATEWAY
 
 	# mangle ARPs to come from the gw's IP
 	arptables -A OUTPUT -o $INTERFACE --opcode request -j mangle --mangle-ip-s "$gw"
@@ -35,8 +35,8 @@ function routed_setup_ipv4 {
 
 function routed_setup_ipv6 {
 	# Add a routing entry for the eui-64
-	prefix=$(ip -6 route list table $TABLE | awk '/\/64/ {print $1; exit}')
-	uplink=$(ip -6 route list table $TABLE | sed -n 's/default via .* dev \([^ ]\+\).*/\1/p' | head -1)
+	prefix=$SUBNET6
+	uplink=$GATEWAY6
 	eui64=$($MAC2EUI64 $MAC $prefix)
 
 	while ip -6 rule del dev $INTERFACE; do :; done
@@ -82,7 +82,8 @@ function routed_setup_firewall {
 
 function setup_nfdhcpd {
 	umask 022
-	cat >$NFDHCPD_STATE_DIR/$INTERFACE <<EOF
+  FILE=$NFDHCPD_STATE_DIR/$INTERFACE
+	cat >$FILE <<EOF
 IFACE=$1
 IP=$IP
 MAC=$MAC
@@ -90,6 +91,19 @@ LINK=$TABLE
 HOSTNAME=$INSTANCE
 TAGS="$TAGS"
 EOF
+if [ -n $GATEWAY ]; then
+ echo GATEWAY=$GATEWAY >> $FILE
+fi
+if [ -n $SUBNET ]; then
+ echo SUBNET=$SUBNET >> $FILE
+fi
+if [ -n $GATEWAY6 ]; then
+ echo GATEWAY6=$GATEWAY6 >> $FILE
+fi
+if [ -n $SUBNET6 ]; then
+ echo SUBNET6=$SUBNET6 >> $FILE
+fi
+
 }
 
 function clear_ebtables {
@@ -136,10 +150,6 @@ function setup_ebtables {
   fi
 }
 
-#FIXME: import router mac from the config files
-#       must know node group!! how???
-ROUTER_MAC=e4:11:5b:b2:8d:ca
-MAC_MASK=ff:ff:ff:0:0:0
 
 TABLE=rt_$NETWORK
 
@@ -158,8 +168,8 @@ if [ "$MODE" = "routed" ]; then
 	iptables -A FORWARD -i $INTERFACE -p udp --dport 67 -j DROP
 
 	routed_setup_ipv4
-#	routed_setup_ipv6
-#	routed_setup_firewall
+	routed_setup_ipv6
+	routed_setup_firewall
 	setup_nfdhcpd $INTERFACE
   clear_ebtables >/dev/null 2>&1
 elif [ "$MODE" = "bridged" ]; then

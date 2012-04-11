@@ -1,0 +1,69 @@
+#!/bin/bash
+
+function get_value {
+  
+  eval def=\$$1
+  read -p "$1? [$def] " x
+  if [ -n "$x" ]; then eval $1="$x"; fi
+
+}
+
+
+DEFAULT=/etc/default/snf-network
+
+CONF=/etc/snf-network/snf-network.conf
+
+source $CONF
+source $DEFAULT
+
+
+if [ ! -e $SHAREDDIR ]; then
+  mkdir $SHAREDDIR
+  mkdir $SHAREDDIR/networks
+  mkdir $SHAREDDIR/infra
+  mkdir $SHAREDDIR/interfaces
+  mkdir $SHAREDDIR/mappings
+fi
+
+#if [ -z "$(grep nfdhcpd.ferm /etc/ferm/ferm.conf)" ]; then 
+#  echo @include 'nfdhcpd.ferm'; >> /etc/ferm/ferm.conf
+#  /etc/init.d/ferm restart
+#fi
+
+
+cd  $SHAREDDIR/infra/
+
+for nodegroup in $NODEGROUPS; do
+  source $DEFAULT
+  echo Group: $nodegroup
+  get_value ROUTER
+  get_value ROUTER_MAC
+  get_value MAC_MASK
+  get_value PUBLIC_INTERFACE
+  get_value PUBLIC_BRIDGE
+  get_value PUBLIC_VLAN
+  get_value PRIVATE_VLAN
+  get_value PRIVATE_BRIDGE
+  get_value MASQ_VLAN
+  get_value MASQ_BRIDGE
+  cat > $nodegroup <<EOF
+ROUTER=$ROUTER
+ROUTER_MAC=$ROUTER_MAC
+MAC_MASK=$MAC_MASK
+PUBLIC_INTERFACE=$PUBLIC_INTERFACE
+PUBLIC_BRIDGE=$PUBLIC_BRIDGE
+PUBLIC_VLAN=$PUBLIC_VLAN
+PRIVATE_VLAN=$PRIVATE_VLAN
+PRIVATE_BRIDGE=$PRIVATE_BRIDGE
+MASQ_VLAN=$MASQ_VLAN
+MASQ_BRIDGE=$MASQ_BRIDGE
+EOF
+done
+
+
+for node in $NODES; do
+  echo Node: $node
+  NODEGROUP=default
+  get_value NODEGROUP
+  ln -s $NODEGROUP $node  
+done
