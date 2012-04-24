@@ -1,0 +1,57 @@
+#!/bin/bash
+
+function get_value {
+  
+  eval def=\$$1
+  read -p "$1? [$def/none] " x
+  if [ "$x" == "none" ]; then
+    eval $1="";
+  elif [ -n "$x" ]; then 
+    eval $1="$x"; 
+  fi
+
+}
+
+
+DEFAULT=/etc/default/snf-network
+
+source $DEFAULT
+source $CONF
+source $INFRA
+
+NODEGROUP=$1
+
+
+if [ $# -ne 2 ]; then
+  echo Usage: snf-network-add-group group_name
+  exit 1
+fi
+
+FILE=$SHAREDDIR/infra/$NODEGROUP
+
+snf-network-enable
+
+source $INFRA
+echo Group: $NODEGROUP
+get_value ROUTER
+get_value ROUTER_MAC
+get_value MAC_MASK
+get_value PUBLIC_INTERFACE
+get_value PUBLIC_BRIDGE
+get_value PUBLIC_VLAN
+get_value PRIVATE_VLAN
+get_value PRIVATE_BRIDGE
+get_value MASQ_VLAN
+get_value MASQ_BRIDGE
+cat > $FILE <<EOF
+ROUTER=$ROUTER
+ROUTER_MAC=$ROUTER_MAC
+MAC_MASK=$MAC_MASK
+PUBLIC_INTERFACE=$PUBLIC_INTERFACE
+PUBLIC_BRIDGE=$PUBLIC_BRIDGE
+PUBLIC_VLAN=$PUBLIC_VLAN
+PRIVATE_VLAN=$PRIVATE_VLAN
+PRIVATE_BRIDGE=$PRIVATE_BRIDGE
+MASQ_VLAN=$MASQ_VLAN
+MASQ_BRIDGE=$MASQ_BRIDGE
+EOF

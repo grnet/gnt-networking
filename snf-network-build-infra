@@ -3,8 +3,12 @@
 function get_value {
   
   eval def=\$$1
-  read -p "$1? [$def] " x
-  if [ -n "$x" ]; then eval $1="$x"; fi
+  read -p "$1? [$def/none] " x
+  if [ "$x" == "none" ]; then
+    eval $1="";
+  elif [ -n "$x" ]; then 
+    eval $1="$x"; 
+  fi
 
 }
 
@@ -21,7 +25,6 @@ if [ ! -e "$SHAREDDIR/infra/" ]; then
 fi
 
 cd  $SHAREDDIR/infra/
-
 
 
 for nodegroup in $NODEGROUPS; do

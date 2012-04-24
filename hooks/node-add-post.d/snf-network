@@ -1,0 +1,27 @@
+#!/bin/bash
+
+source /etc/default/snf-network
+
+source $CONF
+
+
+NODE=$GANETI_NODE_NAME
+GROUP=$GANETI_GROUP_NAME
+
+GROUPINFRA=$SHAREDDIR/infra/$GROUP
+
+HOSTNAME=$(hostname)
+
+if [ "$HOSTNAME" != "$NODE" ]; then
+  exit 0
+fi
+
+snf-network-enable
+
+cd $SHAREDDIR/infra
+
+unconfigure-interfaces
+
+ln -sf $GROUP $NODE
+
+configure-interfaces

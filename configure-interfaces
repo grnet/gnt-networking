@@ -17,7 +17,7 @@ if [ -e "$HOSTINFRA" ]; then
 fi
 
 if [ -e /proc/sys/net/ipv4/conf/$PUBLIC_VLAN  -o \
-#     -e /proc/sys/net/ipv4/conf/$PUBLIC_BRIDGE -o \
+     -e /proc/sys/net/ipv4/conf/$PUBLIC_BRIDGE -o \
      -e /proc/sys/net/ipv4/conf/$MASQ_VLAN -o \
      -e /proc/sys/net/ipv4/conf/$MASQ_BRIDGE -o \
      -e /proc/sys/net/ipv4/conf/$PRIVATE_VLAN -o \
@@ -34,17 +34,27 @@ PUBLIC_MAC=$(ip link show $PUBLIC_INTERFACE | grep link/ether | awk '{print $2}'
 
 
 
-cat > $INTERFACES<<EOF
-#auto $PUBLIC_BRIDGE
-#iface $PUBLIC_BRIDGE inet manual
-#  bridge_ports $PUBLIC_INTERFACE
-#  bridge_stp off
-#  bridge_fd 2
-#  post-up ip link set $PUBLIC_BRIDGE address $PUBLIC_MAC 
+if [ -n "$PUBLIC_BRIDGE" -a -n "$PUBLIC_INTERFACE" ]; then
+  cat > $INTERFACES<<EOF
+auto $PUBLIC_BRIDGE
+iface $PUBLIC_BRIDGE inet manual
+  bridge_ports $PUBLIC_INTERFACE
+  bridge_stp off
+  bridge_fd 2
+  post-up ip link set $PUBLIC_BRIDGE address $PUBLIC_MAC 
 
+EOF
+
+else
+  if [ -n "$PUBLIC_VLAN" ]; then
+    cat >> $INTERFACES<<EOF
 auto $PUBLIC_VLAN
 iface $PUBLIC_VLAN inet manual
 
+EOF
+
+  elif [ -n "$PRIVATE_VLAN" -a -n "$PRIVATE_BRIDGE" ]; then
+    cat >> $INTERFACES<<EOF
 auto $PRIVATE_VLAN
 iface $PRIVATE_VLAN inet manual
 
@@ -55,6 +65,10 @@ iface $PRIVATE_BRIDGE inet manual
   bridge_fd 2
   post-up ip link set $PRIVATE_BRIDGE address $PUBLIC_MAC 
 
+EOF
+
+  elif [ -n "$MASQ_VLAN" -a -n "$MASQ_BRIDGE" ]; then
+    cat >> $INTERFACES<<EOF
 auto $MASQ_VLAN
 iface $MASQ_VLAN inet manual
 
@@ -64,8 +78,11 @@ iface $MASQ_BRIDGE inet manual
   bridge_stp off
   bridge_fd 2
   post-up ip link set $MASQ_BRIDGE address $PUBLIC_MAC 
+
 EOF
 
+  fi
+fi
 
 ifup -i $INTERFACES -a
 

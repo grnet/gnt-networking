@@ -8,9 +8,8 @@ source $INFRA
 
 HOSTNAME=$(hostname)
 
-
 INTERFACES=$SHAREDDIR/interfaces/$HOSTNAME
-HOSTINFRA=$SHAREDDIR/infra/$HOSTNAME
 
-ifdown -i $INTERFACES -a --force
-
+if [ -e "$INTERFACES" ]; then
+  ifdown -i $INTERFACES -a --force
+fi
