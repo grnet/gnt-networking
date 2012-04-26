@@ -1,0 +1,12 @@
+#!/bin/bash
+
+if [ $# -ne 1 ]; then
+  echo "Usage: $0 interface"
+  exit 1
+fi
+
+IFACE=$1
+
+MAC=$(ip link show $IFACE | grep link/ether | awk '{print $2}')
+
+echo $MAC
