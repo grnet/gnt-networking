@@ -14,8 +14,3 @@ if [ ! -e "$SHAREDDIR" ]; then
   mkdir $SHAREDDIR/mappings
 fi
 
-if [ -z "$(grep nfdhcpd.ferm /etc/ferm/ferm.conf)" ]; then 
-  echo @include 'nfdhcpd.ferm'; >> /etc/ferm/ferm.conf
-  /etc/init.d/ferm restart
-fi
-

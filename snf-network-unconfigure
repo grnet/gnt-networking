@@ -8,46 +8,35 @@ NETWORKS="$(ls $SHAREDDIR/networks/)"
 
 HOSTNAME=$(hostname)
 
-INTERFACES=$SHAREDDIR/interfaces/$HOSTNAME
-
-ifup -i $INTERFACES -a
-
 for NETWORK in $NETWORKS; do
 
   NETFILE=$SHAREDDIR/networks/$NETWORK
   NODEMAPFILE=$SHAREDDIR/mappings/$NETWORK-$HOSTNAME
   NODEINFRAFILE=$SHAREDDIR/infra/$HOSTNAME
-  CLUSTERINFRAFILE=$SHAREDDIR/infra/cluster
 
   RT_TABLES=/etc/iproute2/rt_tables
 
   source $NODEINFRAFILE
-  source $CLUSTERINFRAFILE
   source $NETFILE
+  source $NODEMAPFILE
+
 
   if [ "$MODE" == "routed" ]; then 
     VLAN=$LINK
     TABLE=rt_$NETWORK
     if [ "$TYPE" == "public" ]; then
       ARP_IP=$(ipcalc $SUBNET | grep HostMax | awk '{print $2}')
+    
+      arptables -D OUTPUT -o $VLAN --opcode request -j mangle --mangle-ip-s  $ARP_IP 
+
+      ip route del default via $GATEWAY dev $VLAN table $TABLE
+      ip route del $SUBNET dev $VLAN table $TABLE
+
+      ip route del $SUBNET dev $VLAN table main 
+
+      ip rule del iif $VLAN table $TABLE
       
-      ip link set $VLAN up
-
-      echo 1 > "/proc/sys/net/ipv4/conf/$VLAN/proxy_arp"
-
-      ID=$(wc -l < $RT_TABLES)
-      echo $((ID+1)) $TABLE >> $RT_TABLES
-
-      ip rule add iif $VLAN table $TABLE
-
-      ip route add $SUBNET dev $VLAN table main 
-
-      ip route add $SUBNET dev $VLAN table $TABLE
-      ip route add default via $GATEWAY dev $VLAN table $TABLE
-      
-      echo 1 > /proc/sys/net/ipv4/conf/all/forwarding
-
-      arptables -A OUTPUT -o $VLAN --opcode request -j mangle --mangle-ip-s  $ARP_IP 
+      sed -i 's/.*'"$TABLE"'$//' $RT_TABLES
     fi
   fi
 
@@ -59,11 +48,16 @@ for NETWORK in $NETWORKS; do
       if [ "$TYPE" == "private" ]; then 
         if [ "$HOSTNAME" == "$ROUTER" ]; then
           NETMASK=$(ipcalc $SUBNET | grep Netmask | awk '{print $4}')
-          ip addr add $GATEWAY/$NETMASK dev $BRIDGE
-          iptables -t nat -A POSTROUTING -s $SUBNET \! -d 192.168.0.0/16 -j MASQUERADE
+          ip addr del $GATEWAY/$NETMASK dev $BRIDGE
+          iptables -t nat -D POSTROUTING -s $SUBNET \! -d 192.168.0.0/16 -j MASQUERADE
         fi  
       fi
     fi
   fi
 
 done
+
+INTERFACES=$SHAREDDIR/interfaces/$HOSTNAME
+
+ifdown -i $INTERFACES -a --force
+

@@ -11,15 +11,21 @@ HOSTNAME=$(hostname)
 
 INTERFACES=$SHAREDDIR/interfaces/$HOSTNAME
 HOSTINFRA=$SHAREDDIR/infra/$HOSTNAME
+CLUSTERINFRA=$SHAREDDIR/infra/cluster
 
 if [ -e "$HOSTINFRA" ]; then
   source $HOSTINFRA
 fi
 
-if [ -e /proc/sys/net/ipv4/conf/$PUBLIC_BRIDGE -o \
-     -e /proc/sys/net/ipv4/conf/$PUBLIC_VLAN  -o \ 
-     -e /proc/sys/net/ipv4/conf/$PRIVATE_VLAN -o \
-     -e /proc/sys/net/ipv4/conf/$PRIVATE_BRIDGE ]; then 
+source $CLUSTERINFRA
+
+if [ -n "$PUBLIC_BRIDGE" -a -e /proc/sys/net/ipv4/conf/$PUBLIC_BRIDGE ]; then 
+  echo Interfaces already exist! Please check: 
+  echo $PUBLIC_BRIDGE for bridging TAPs with public IPs
+  exit 1
+elif [ -n "$PUBLIC_VLAN" -a -e /proc/sys/net/ipv4/conf/$PUBLIC_VLAN -o \
+       -n "$PRIVATE_BRIDGE" -a -e /proc/sys/net/ipv4/conf/$PRIVATE_BRIDGE -o \
+       -n "$PRIVATE_VLAN" -a -e /proc/sys/net/ipv4/conf/$PRIVATE_VLAN ]; then
   echo Interfaces already exist! Please check: 
   echo $PUBLIC_BRIDGE for bridging TAPs with public IPs
   echo $PUBLIC_VLAN for routing TAPs with public IPs
@@ -28,15 +34,12 @@ if [ -e /proc/sys/net/ipv4/conf/$PUBLIC_BRIDGE -o \
 fi
 
 
-PUBLIC_INTERFACE=$(ip route | grep default | awk '{print $5}')
-PUBLIC_MAC=$(ip link show $PUBLIC_INTERFACE | grep link/ether | awk '{print $2}')
 
-
-if [ -n "$PUBLIC_BRIDGE" -a -n "$PUBLIC_INTERFACE" ]; then
+if [ -n "$PUBLIC_BRIDGE" -a -n "$PUBLIC_IFACE" ]; then
   cat > $INTERFACES<<EOF
 auto $PUBLIC_BRIDGE
 iface $PUBLIC_BRIDGE inet manual
-  bridge_ports $PUBLIC_INTERFACE
+  bridge_ports $PUBLIC_IFACE
   bridge_stp off
   bridge_fd 2
   post-up ip link set $PUBLIC_BRIDGE address $PUBLIC_MAC 
@@ -45,13 +48,16 @@ EOF
 
 else
   if [ -n "$PUBLIC_VLAN" ]; then
+    echo PUBLIC_VLAN=$PUBLIC_VLAN >> $HOSTINFRA
     cat >> $INTERFACES<<EOF
 auto $PUBLIC_VLAN
 iface $PUBLIC_VLAN inet manual
 
 EOF
+  fi
 
   if [ -n "$PRIVATE_VLAN" -a -n "$PRIVATE_BRIDGE" ]; then
+    echo PRIVATE_VLAN=$PRIVATE_VLAN >> $HOSTINFRA
     cat >> $INTERFACES<<EOF
 auto $PRIVATE_VLAN
 iface $PRIVATE_VLAN inet manual

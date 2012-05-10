@@ -141,7 +141,7 @@ function setup_ebtables {
   #accept dhcp responses from host (nfdhcpd)
   ebtables -A $TO -p ipv4 --ip-protocol=udp  --ip-destination-port=68 -j ACCEPT
   if [ "$TYPE" == "private" ]; then
-    if [ ! -z "$GATEWAY" ]; then
+    if [ ! -z "$GATEWAY" -a $ENABLE_MASQ ]; then
       # allow packets from/to router (for masquerading
       ebtables -A $TO -s $ROUTER_MAC -j ACCEPT
       ebtables -A INPUT -i $TAP -j $FROM
@@ -164,8 +164,14 @@ if [ -e "$NODEINFRAFILE" ]; then
   source $NODEINFRAFILE
 fi
 
+CLUSTERINFRAFILE=$SHAREDDIR/infra/cluster
+
+if [ -e "$CLUSTERINFRAFILE" ]; then
+  source $CLUSTERINFRAFILE
+fi
 
 NETFILE=$SHAREDDIR/networks/$NETWORK
+
 if [ -e "$NETFILE" ]; then
   source $NETFILE
 fi

@@ -1,0 +1,59 @@
+#!/bin/bash
+
+source /etc/default/snf-network
+
+source $CONF
+
+NETWORK=$GANETI_GROUP_NETWORK_NAME
+MODE=$GANETI_GROUP_NETWORK_MODE
+LINK=$GANETI_GROUP_NETWORK_LINK
+
+HOSTNAME=$(hostname)
+
+NETFILE=$SHAREDDIR/networks/$NETWORK
+NODEMAPFILE=$SHAREDDIR/mappings/$NETWORK-$HOSTNAME
+NODEINFRAFILE=$SHAREDDIR/infra/$HOSTNAME
+CLUSTERINFRAFILE=$SHAREDDIR/infra/cluster
+
+RT_TABLES=/etc/iproute2/rt_tables
+
+source $NODEINFRAFILE
+source $CLUSTERINFRAFILE
+source $NETFILE
+source $NODEMAPFILE
+
+if [ "$MODE" == "routed" ]; then 
+  VLAN=$LINK
+  TABLE=rt_$NETWORK
+  if [ "$TYPE" == "public" ]; then
+    ARP_IP=$(ipcalc $SUBNET | grep HostMax | awk '{print $2}')
+  
+    arptables -D OUTPUT -o $VLAN --opcode request -j mangle --mangle-ip-s  $ARP_IP 
+
+    ip route del default via $GATEWAY dev $VLAN table $TABLE
+    ip route del $SUBNET dev $VLAN table $TABLE
+
+    ip route del $SUBNET dev $VLAN table main 
+
+    ip rule del iif $VLAN table $TABLE
+    
+    sed -i 's/.*'"$TABLE"'$//' $RT_TABLES
+  fi
+fi
+
+
+
+if [ "$MODE" == "bridged" ]; then
+  BRIDGE=$LINK
+  if [ ! -z "$GATEWAY" -a $ENABLE_MASQ]; then
+    if [ "$TYPE" == "private" ]; then 
+      if [ "$HOSTNAME" == "$ROUTER" ]; then
+        NETMASK=$(ipcalc $SUBNET | grep Netmask | awk '{print $4}')
+        ip addr del $GATEWAY/$NETMASK dev $BRIDGE
+        iptables -t nat -D POSTROUTING -s $SUBNET \! -d 192.168.0.0/16 -j MASQUERADE
+      fi  
+    fi
+  fi
+fi
+
+rm $NODEMAPFILE

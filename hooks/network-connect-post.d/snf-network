@@ -1,0 +1,69 @@
+#!/bin/bash
+
+source /etc/default/snf-network
+
+source $CONF
+
+GROUP=$GANETI_GROUP_NAME
+NETWORK=$GANETI_GROUP_NETWORK_NAME
+MODE=$GANETI_GROUP_NETWORK_MODE
+LINK=$GANETI_GROUP_NETWORK_LINK
+
+HOSTNAME=$(hostname)
+
+NETFILE=$SHAREDDIR/networks/$NETWORK
+NODEMAPFILE=$SHAREDDIR/mappings/$NETWORK-$HOSTNAME
+NODEINFRAFILE=$SHAREDDIR/infra/$HOSTNAME
+
+RT_TABLES=/etc/iproute2/rt_tables
+
+cat > $NODEMAPFILE <<EOF
+MODE=$MODE
+LINK=$LINK
+EOF
+
+
+source $NODEINFRAFILE
+source $NETFILE
+
+if [ "$MODE" == "routed" ]; then 
+  VLAN=$LINK
+  TABLE=rt_$NETWORK
+  if [ "$TYPE" == "public" ]; then
+    ARP_IP=$(ipcalc $SUBNET | grep HostMax | awk '{print $2}')
+    
+    ip link set $VLAN up
+
+    echo 1 > "/proc/sys/net/ipv4/conf/$VLAN/proxy_arp"
+
+    ID=$(wc -l < $RT_TABLES)
+    echo $((ID+1)) $TABLE >> $RT_TABLES
+
+    ip rule add iif $VLAN table $TABLE
+
+    ip route add $SUBNET dev $VLAN table main 
+
+    ip route add $SUBNET dev $VLAN table $TABLE
+    ip route add default via $GATEWAY dev $VLAN table $TABLE
+    
+    echo 1 > /proc/sys/net/ipv4/conf/all/forwarding
+
+    arptables -A OUTPUT -o $VLAN --opcode request -j mangle --mangle-ip-s  $ARP_IP 
+  fi
+fi
+
+
+
+if [ "$MODE" == "bridged" ]; then
+  BRIDGE=$LINK
+  if [ ! -z "$GATEWAY" -a $ENABLE_MASQ ]; then
+    if [ "$TYPE" == "private" ]; then 
+      if [ "$HOSTNAME" == "$ROUTER" ]; then
+        NETMASK=$(ipcalc $SUBNET | grep Netmask | awk '{print $4}')
+        ip addr add $GATEWAY/$NETMASK dev $BRIDGE
+        iptables -t nat -A POSTROUTING -s $SUBNET \! -d 192.168.0.0/16 -j MASQUERADE
+      fi  
+    fi
+  fi
+fi
+
