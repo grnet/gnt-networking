@@ -462,7 +462,7 @@ class VMNetProxy(object): # pylint: disable=R0902
         """
         for mac in self.clients.keys():
             if self.clients[mac].ifname == ifname:
-                iface = self.client[mac].iface
+                iface = self.clients[mac].iface
                 del self.clients[mac]
 
         for ifindex in self.ifaces.keys():
@@ -600,8 +600,11 @@ class VMNetProxy(object): # pylint: disable=R0902
             return
 
         ifmac = self.get_iface_hw_addr(iface)
-        binding = self.clients[ifmac]
-        subnet = binding.net6
+        binding = [ b for b in self.clients.values() if b.ifname == iface ]
+        subnet = binding[0].net6
+        if subnet.net is None:
+          logging.debug("No IPv6 network assigned for the interface")
+          return
         ifll = subnet.make_ll64(ifmac)
 
         # Signal the kernel that it shouldn't further process the packet
@@ -636,8 +639,12 @@ class VMNetProxy(object): # pylint: disable=R0902
             return
 
         ifmac = self.get_iface_hw_addr(iface)
-        binding = self.clients[ifmac]
-        subnet = binding.net6
+        binding = [ b for b in self.clients.values() if b.ifname == iface ]
+        subnet = binding[0].net6
+        if subnet.net is None:
+          logging.debug("No IPv6 network assigned for the interface")
+          return
+
         ifll = subnet.make_ll64(ifmac)
 
         ns = IPv6(payload.get_data())
