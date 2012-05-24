@@ -12,8 +12,8 @@ NFDHCPD_STATE_DIR=/var/lib/nfdhcpd
 function clear_tap {
 
  arptables -D OUTPUT -o $INTERFACE --opcode request -j mangle >/dev/null 2>&1
- while ip rule del dev $INTERFACE; do :; done
- iptables -D FORWARD -i $INTERFACE -p udp --dport 67 -j DROP 2>/dev/null
+ while ip rule del dev $INTERFACE; do :; done >/dev/null 2>&1
+ iptables -D FORWARD -i $INTERFACE -p udp --dport 67 -j DROP > /dev/null 2>&1
 
 
 }
@@ -24,7 +24,7 @@ function routed_setup_ipv4 {
 	arptables -A OUTPUT -o $INTERFACE --opcode request -j mangle --mangle-ip-s    "$GATEWAY"
 
 	# route interface to the proper routing table
-	ip rule add dev $INTERFACE table $TABLE
+	ip rule add dev $INTERFACE table $TABLE 
 
 	# static route mapping IP -> INTERFACE
 	ip route replace $IP proto static dev $INTERFACE table $TABLE
@@ -39,10 +39,11 @@ function routed_setup_ipv6 {
 	uplink=$GATEWAY6
 	eui64=$($MAC2EUI64 $MAC $prefix)
 
-	while ip -6 rule del dev $INTERFACE; do :; done
+  
+	while ip -6 rule del dev $INTERFACE; do :; done > /dev/null 2>&1
 	ip -6 rule add dev $INTERFACE table $TABLE
 	ip -6 ro replace $eui64/128 dev $INTERFACE table $TABLE
-	ip -6 neigh add proxy $eui64 dev $uplink
+	ip -6 neigh add proxy $eui64 dev $uplink > /dev/null 2>&1
 
 	# disable proxy NDP since we're handling this on userspace
 	# this should be the default, but better safe than sorry
@@ -104,6 +105,8 @@ if [ -n "$GATEWAY6" ]; then
 fi
 if [ -n "$SUBNET6" ]; then
  echo SUBNET6=$SUBNET6 >> $FILE
+ eui64=$($MAC2EUI64 $MAC $SUBNET6)
+ echo EUI64=$eui64 >> $FILE
 fi
 
 }
@@ -116,13 +119,13 @@ function clear_ebtables {
   exist=$(ebtables -L | grep $TAP)
 
   if [ ! -z "$exist" ]; then
-    ebtables -D INPUT -i $TAP -j $FROM
-    ebtables -D FORWARD -i $TAP -j $FROM
-    ebtables -D FORWARD -o $TAP -j $TO
-    ebtables -D OUTPUT -o $TAP -j $TO
+    ebtables -D INPUT -i $TAP -j $FROM > /dev/null 2>&1
+    ebtables -D FORWARD -i $TAP -j $FROM > /dev/null 2>&1
+    ebtables -D FORWARD -o $TAP -j $TO > /dev/null 2>&1
+    ebtables -D OUTPUT -o $TAP -j $TO > /dev/null 2>&1
 
-    ebtables -X $FROM
-    ebtables -X $TO
+    ebtables -X $FROM > /dev/null 2>&1
+    ebtables -X $TO > /dev/null 2>&1
   fi
 }
 
@@ -179,7 +182,8 @@ fi
 if [ "$MODE" = "routed" ]; then
   TABLE=rt_$NETWORK
 	# special proxy-ARP/NDP routing mode
-  clear_tap
+  clear_tap > /dev/null 2>&1
+  clear_ebtables >/dev/null 2>&1
 	# use a constant predefined MAC address for the tap
 	ip link set $INTERFACE addr $TAP_CONSTANT_MAC
 	# bring the tap up
@@ -188,13 +192,12 @@ if [ "$MODE" = "routed" ]; then
 	# Drop unicast BOOTP/DHCP packets
 	iptables -A FORWARD -i $INTERFACE -p udp --dport 67 -j DROP
 
-	routed_setup_ipv4
-	routed_setup_ipv6
+	routed_setup_ipv4 > /dev/null 2>&1
+	routed_setup_ipv6 > /dev/null 2>&1
 	routed_setup_firewall
 	setup_nfdhcpd $INTERFACE
-  clear_ebtables >/dev/null 2>&1
 elif [ "$MODE" = "bridged" ]; then
-  clear_tap
+  clear_tap > /dev/null 2>&1
   clear_ebtables >/dev/null 2>&1
 	ifconfig $INTERFACE 0.0.0.0 up
 	brctl addif $BRIDGE $INTERFACE

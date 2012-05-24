@@ -135,6 +135,7 @@ def parse_binding_file(path):
     gateway = None
     subnet6 = None
     gateway6 = None
+    eui64 = None
 
     for line in iffile:
         if line.startswith("IP="):
@@ -154,10 +155,12 @@ def parse_binding_file(path):
             subnet6 = line.strip().split("=")[1]
         elif line.startswith("GATEWAY6="):
             gateway6 = line.strip().split("=")[1]
+        elif line.startswith("EUI64="):
+            eui64 = line.strip().split("=")[1]
 
     return Client(tap=tap, mac=mac, ips=ips, 
                   hostname=hostname, indev=indev, subnet=subnet,
-                  gateway=gateway, subnet6=subnet6, gateway6=gateway6 )
+                  gateway=gateway, subnet6=subnet6, gateway6=gateway6, eui64=eui64 )
 
 class ClientFileHandler(pyinotify.ProcessEvent):
     def __init__(self, server):
@@ -183,7 +186,7 @@ class ClientFileHandler(pyinotify.ProcessEvent):
 
 class Client(object):
     def __init__(self, tap=None, indev=None, mac=None, ips=None, hostname=None, 
-                 subnet=None, gateway=None, subnet6=None, gateway6=None ):
+                 subnet=None, gateway=None, subnet6=None, gateway6=None, eui64=None ):
         self.mac = mac
         self.ips = ips
         self.hostname = hostname
@@ -195,6 +198,7 @@ class Client(object):
         self.subnet6 = subnet6
         self.gateway6 = gateway6
         self.net6 = Subnet(net=subnet6, gw=gateway6, dev=tap)
+        self.eui64 = eui64
 
     @property
     def ip(self):
@@ -296,7 +300,7 @@ class VMNetProxy(object): # pylint: disable=R0902
 
         self.clients = {}
         #self.subnets = {}
-        self.ifaces = {}
+        #self.ifaces = {}
         #self.v6nets = {}
         self.nfq = {}
         self.l2socket = socket.socket(socket.AF_PACKET,
@@ -452,23 +456,15 @@ class VMNetProxy(object): # pylint: disable=R0902
             if binding.is_valid():
                 self.clients[binding.mac] = binding
                 logging.debug("Added client %s on %s", binding.hostname, tap)
-                self.ifaces[ifindex] = binding.indev
+        logging.debug("clients %s", self.clients.keys())
 
     def remove_tap(self, tap):
         """ Cleanup clients on a removed interface
 
         """
-        for mac in self.clients.keys():
-            logging.debug("mac %s", mac)
-            logging.debug("tap %s", self.clients[mac].tap)
-            logging.debug("indev %s", self.clients[mac].indev)
-            if self.clients[mac].tap == tap:
-                indev = self.clients[mac].indev
-                del self.clients[mac]
-
-        for ifindex in self.ifaces.keys():
-            if self.ifaces[ifindex] == indev == tap:
-                del self.ifaces[ifindex]
+        for b in self.clients.values():
+            if b.tap == tap:
+                del b
 
         logging.debug("Removed interface %s", tap)
 
@@ -476,24 +472,8 @@ class VMNetProxy(object): # pylint: disable=R0902
         """ Generate a reply to bnetfilter-queue-deva BOOTP/DHCP request
 
         """
-        indevidx = payload.get_indev()
-        try:
-            # Get the actual interface from the ifindex
-            indev = self.ifaces[indevidx]
-        except KeyError:
-            # We don't know anything about this interface, so accept the packet
-            # and return
-            logging.debug("Ignoring DHCP request on unknown iface %d", indev)
-            # We don't know what to do with this packet, so let the kernel
-            # handle it
-            payload.set_verdict(nfqueue.NF_ACCEPT)
-            return
-
         # Decode the response - NFQUEUE relays IP packets
         pkt = IP(payload.get_data())
-
-        # Signal the kernel that it shouldn't further process the packet
-        payload.set_verdict(nfqueue.NF_DROP)
 
         # Get the client MAC address
         resp = pkt.getlayer(BOOTP).copy()
@@ -508,15 +488,14 @@ class VMNetProxy(object): # pylint: disable=R0902
         try:
             binding = self.clients[mac]
         except KeyError:
-            logging.warn("Invalid client %s on %s", mac, indev)
+            logging.warn("Invalid client for mac %s ", mac)
+            payload.set_verdict(nfqueue.NF_ACCEPT)
             return
 
-        if indev != binding.indev:
-            logging.warn("Received spoofed DHCP request for %s from interface"
-                         " %s instead of %s", mac, indev, binding.indev)
-            return
+        # Signal the kernel that it shouldn't further process the packet
+        payload.set_verdict(nfqueue.NF_DROP)
 
-        resp = Ether(dst=mac, src=self.get_iface_hw_addr(indev))/\
+        resp = Ether(dst=mac, src=self.get_iface_hw_addr(binding.indev))/\
                IP(src=DHCP_DUMMY_SERVER_IP, dst=binding.ip)/\
                UDP(sport=pkt.dport, dport=pkt.sport)/resp
         subnet = binding.net
@@ -579,37 +558,46 @@ class VMNetProxy(object): # pylint: disable=R0902
         ]
         resp /= DHCP(options=dhcp_options)
 
+        if payload.get_indev() != self.get_ifindex(binding.indev):
+            logging.warn("Received spoofed DHCP request for %s from interface"
+                         " %s instead of %s", mac, payload.get_indev(), binding.indev)
+            return
+
         logging.info("%s to %s (%s) on %s", DHCP_TYPES[resp_type], mac,
                      binding.ip, binding.tap)
-        self.sendp(resp, indev )
+        self.sendp(resp, binding.indev)
 
     def rs_response(self, i, payload): # pylint: disable=W0613
         """ Generate a reply to a BOOTP/DHCP request
 
         """
-        indevidx = payload.get_indev()
+        pkt = IPv6(payload.get_data())
+        mac = pkt.lladdr
+        logging.debug("rs for mac %s", mac)
         try:
-            # Get the actual interface from the ifindex
-            indev = self.ifaces[indevidx]
+          binding = self.clients[mac]
         except KeyError:
             logging.debug("Ignoring router solicitation on"
-                          " unknown interface %d", indev)
+                          " for mac %s", mac)
             # We don't know what to do with this packet, so let the kernel
             # handle it
             payload.set_verdict(nfqueue.NF_ACCEPT)
             return
-
-        binding = [ b for b in self.clients.values() if b.tap == indev ]
-        subnet = binding[0].net6
-        if subnet.net is None:
-          logging.debug("No IPv6 network assigned for the interface")
-          return
-        ifll = subnet.make_ll64(ifmac)
-
+  
         # Signal the kernel that it shouldn't further process the packet
         payload.set_verdict(nfqueue.NF_DROP)
 
-        resp = Ether(src=self.get_iface_hw_addr(indev))/\
+        subnet = binding.net6
+
+        if subnet.net is None:
+          logging.debug("No IPv6 network assigned for the interface")
+          return
+
+        ifmac = self.get_iface_hw_addr(binding.indev)
+        ifll = subnet.make_ll64(ifmac)
+
+
+        resp = Ether(src=ifmac)/\
                IPv6(src=str(ifll))/ICMPv6ND_RA(routerlifetime=14400)/\
                ICMPv6NDOptPrefixInfo(prefix=str(subnet.prefix),
                                      prefixlen=subnet.prefixlen)
@@ -618,57 +606,53 @@ class VMNetProxy(object): # pylint: disable=R0902
             resp /= ICMPv6NDOptRDNSS(dns=self.ipv6_nameservers,
                                      lifetime=self.ra_period * 3)
 
-        logging.info("RA on %s for %s", indev, subnet.net)
-        self.sendp(resp, indev)
+        logging.info("RA on %s for %s", binding.indev, subnet.net)
+        self.sendp(resp, binding.indev)
 
     def ns_response(self, i, payload): # pylint: disable=W0613
         """ Generate a reply to an ICMPv6 neighbor solicitation
 
         """
-        indevidx = payload.get_indev()
-        try:
-            # Get the actual interface from the ifindex
-            indev = self.ifaces[indevidx]
-        except KeyError:
+        ns = IPv6(payload.get_data())
+
+        binding = None
+        for b in self.clients.values():
+          if b.eui64 == ns.tgt:
+            binding = b
+            break
+
+        if binding is None:
             logging.debug("Ignoring neighbour solicitation on"
-                          " unknown interface %d", indev)
+                          " for eui64 %s", ns.tgt)
             # We don't know what to do with this packet, so let the kernel
             # handle it
             payload.set_verdict(nfqueue.NF_ACCEPT)
             return
 
-        binding = [ b for b in self.clients.values() if b.tap == indev ]
-        subnet = binding[0].net6
+        payload.set_verdict(nfqueue.NF_DROP)
+
+        subnet = binding.net6
         if subnet.net is None:
           logging.debug("No IPv6 network assigned for the interface")
           return
 
-        indevmac = self.get_iface_hw_addr(indev)
+        indevmac = self.get_iface_hw_addr(binding.indev)
 
         ifll = subnet.make_ll64(indevmac)
-
-        ns = IPv6(payload.get_data())
 
         if not (subnet.net.overlaps(ns.tgt) or str(ns.tgt) == str(ifll)):
             logging.debug("Received NS for a non-routable IP (%s)", ns.tgt)
             payload.set_verdict(nfqueue.NF_ACCEPT)
             return 1
 
-        payload.set_verdict(nfqueue.NF_DROP)
-
-        try:
-            client_lladdr = ns.lladdr
-        except AttributeError:
-            return 1
-        
-        resp = Ether(src=indevmac, dst=client_lladdr)/\
+        logging.debug("na ether %s %s", binding.mac, ns.src)
+        resp = Ether(src=indevmac, dst=binding.mac)/\
                IPv6(src=str(ifll), dst=ns.src)/\
                ICMPv6ND_NA(R=1, O=0, S=1, tgt=ns.tgt)/\
                ICMPv6NDOptDstLLAddr(lladdr=indevmac)
 
-        logging.info("NA on %s for %s", indev, ns.tgt)
-        self.sendp(resp, indev)
-        return 1
+        logging.info("NA on %s for %s", binding.indev, ns.tgt)
+        self.sendp(resp, binding.indev)
 
     def send_periodic_ra(self):
         # Use a separate thread as this may take a _long_ time with
