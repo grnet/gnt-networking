@@ -87,7 +87,7 @@ function setup_nfdhcpd {
   #needed in bridged mode where the packets seems to arrive from the
   #bridge and not from the tap
 	cat >$FILE <<EOF
-IFACE=$1
+INDEV=$1
 IP=$IP
 MAC=$MAC
 HOSTNAME=$INSTANCE
