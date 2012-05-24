@@ -23,9 +23,9 @@ source $NETFILE
 source $NODEMAPFILE
 
 if [ "$MODE" == "routed" ]; then 
-  VLAN=$LINK
   TABLE=rt_$NETWORK
   if [ "$TYPE" == "public" ]; then
+    VLAN=$PUBLIC_VLAN
     ARP_IP=$(ipcalc $SUBNET | grep HostMax | awk '{print $2}')
   
     arptables -D OUTPUT -o $VLAN --opcode request -j mangle --mangle-ip-s  $ARP_IP 

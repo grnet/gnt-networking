@@ -27,9 +27,9 @@ source $NODEINFRAFILE
 source $NETFILE
 
 if [ "$MODE" == "routed" ]; then 
-  VLAN=$LINK
   TABLE=rt_$NETWORK
   if [ "$TYPE" == "public" ]; then
+    VLAN=$PUBLIC_VLAN
     ARP_IP=$(ipcalc $SUBNET | grep HostMax | awk '{print $2}')
     
     ip link set $VLAN up
