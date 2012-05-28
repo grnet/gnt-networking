@@ -129,7 +129,7 @@ def parse_binding_file(path):
     tap = os.path.basename(path)
     indev = None
     mac = None
-    ips = None
+    ip = None
     hostname = None
     subnet = None
     gateway = None
@@ -137,28 +137,33 @@ def parse_binding_file(path):
     gateway6 = None
     eui64 = None
 
+    def get_value(line):
+        v = line.strip().split('=')[1]
+        if v == '':
+          return None
+        return v
+
     for line in iffile:
         if line.startswith("IP="):
-            ip = line.strip().split("=")[1]
-            ips = ip.split()
+            ip = get_value(line)
         elif line.startswith("MAC="):
-            mac = line.strip().split("=")[1]
+            mac = get_value(line)
         elif line.startswith("HOSTNAME="):
-            hostname = line.strip().split("=")[1]
+            hostname = get_value(line)
         elif line.startswith("INDEV="):
-            indev = line.strip().split("=")[1]
+            indev = get_value(line)
         elif line.startswith("SUBNET="):
-            subnet = line.strip().split("=")[1]
+            subnet = get_value(line)
         elif line.startswith("GATEWAY="):
-            gateway = line.strip().split("=")[1]
+            gateway = get_value(line)
         elif line.startswith("SUBNET6="):
-            subnet6 = line.strip().split("=")[1]
+            subnet6 = get_value(line)
         elif line.startswith("GATEWAY6="):
-            gateway6 = line.strip().split("=")[1]
+            gateway6 = get_value(line)
         elif line.startswith("EUI64="):
-            eui64 = line.strip().split("=")[1]
+            eui64 = get_value(line)
 
-    return Client(tap=tap, mac=mac, ips=ips, 
+    return Client(tap=tap, mac=mac, ip=ip, 
                   hostname=hostname, indev=indev, subnet=subnet,
                   gateway=gateway, subnet6=subnet6, gateway6=gateway6, eui64=eui64 )
 
@@ -185,10 +190,10 @@ class ClientFileHandler(pyinotify.ProcessEvent):
 
 
 class Client(object):
-    def __init__(self, tap=None, indev=None, mac=None, ips=None, hostname=None, 
+    def __init__(self, tap=None, indev=None, mac=None, ip=None, hostname=None, 
                  subnet=None, gateway=None, subnet6=None, gateway6=None, eui64=None ):
         self.mac = mac
-        self.ips = ips
+        self.ip = ip
         self.hostname = hostname
         self.indev = indev
         self.tap = tap
@@ -200,12 +205,8 @@ class Client(object):
         self.net6 = Subnet(net=subnet6, gw=gateway6, dev=tap)
         self.eui64 = eui64
 
-    @property
-    def ip(self):
-        return self.ips[0]
-
     def is_valid(self):
-        return self.mac is not None and self.ips is not None\
+        return self.mac is not None and self.ip is not None\
                and self.hostname is not None
 
 

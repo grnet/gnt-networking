@@ -7,16 +7,45 @@ TAP_CONSTANT_MAC=cc:47:52:4e:45:54 # GRNET in hex :-)
 MAC2EUI64=/usr/bin/mac2eui64
 NFDHCPD_STATE_DIR=/var/lib/nfdhcpd
 
+function clear_routed_setup_ipv4 {
 
-
-function clear_tap {
-
- arptables -D OUTPUT -o $INTERFACE --opcode request -j mangle >/dev/null 2>&1
- while ip rule del dev $INTERFACE; do :; done >/dev/null 2>&1
- iptables -D FORWARD -i $INTERFACE -p udp --dport 67 -j DROP > /dev/null 2>&1
-
+ arptables -D OUTPUT -o $INTERFACE --opcode request -j mangle
+ while ip rule del dev $INTERFACE; do :; done
+ iptables -D FORWARD -i $INTERFACE -p udp --dport 67 -j DROP
 
 }
+
+function clear_routed_setup_ipv6 {
+
+ while ip -6 rule del dev $INTERFACE; do :; done
+
+}
+
+
+function clear_routed_setup_firewall {
+
+  for oldchain in protected unprotected limited; do
+    iptables  -D FORWARD -o $INTERFACE -j $oldchain
+    ip6tables -D FORWARD -o $INTERFACE -j $oldchain
+  done
+
+}
+
+function clear_ebtables {
+  TAP=$INTERFACE
+  FROM=FROM${TAP^^}
+  TO=TO${TAP^^}
+
+  ebtables -D INPUT -i $TAP -j $FROM
+  ebtables -D FORWARD -i $TAP -j $FROM
+  ebtables -D FORWARD -o $TAP -j $TO
+  ebtables -D OUTPUT -o $TAP -j $TO
+
+  ebtables -X $FROM
+  ebtables -X $TO
+}
+
+
 
 function routed_setup_ipv4 {
 
@@ -40,10 +69,9 @@ function routed_setup_ipv6 {
 	eui64=$($MAC2EUI64 $MAC $prefix)
 
   
-	while ip -6 rule del dev $INTERFACE; do :; done > /dev/null 2>&1
 	ip -6 rule add dev $INTERFACE table $TABLE
 	ip -6 ro replace $eui64/128 dev $INTERFACE table $TABLE
-	ip -6 neigh add proxy $eui64 dev $uplink > /dev/null 2>&1
+	ip -6 neigh add proxy $eui64 dev $uplink 
 
 	# disable proxy NDP since we're handling this on userspace
 	# this should be the default, but better safe than sorry
@@ -67,66 +95,10 @@ function routed_setup_firewall {
 		esac
 	done
 
-	# Flush any old rules. We have to consider all chains, since
-	# we are not sure the instance was on the same chain, or had the same
-	# tap interface.
-	for oldchain in protected unprotected limited; do
-		iptables  -D FORWARD -o $INTERFACE -j $oldchain 2>/dev/null
-		ip6tables -D FORWARD -o $INTERFACE -j $oldchain 2>/dev/null
-	done
-
 	if [ "x$chain" != "x" ]; then
 		iptables  -A FORWARD -o $INTERFACE -j $chain
 		ip6tables -A FORWARD -o $INTERFACE -j $chain
 	fi
-}
-
-function setup_nfdhcpd {
-	umask 022
-  FILE=$NFDHCPD_STATE_DIR/$INTERFACE
-  #IFACE is the interface from which the packet seems to arrive
-  #needed in bridged mode where the packets seems to arrive from the
-  #bridge and not from the tap
-	cat >$FILE <<EOF
-INDEV=$1
-IP=$IP
-MAC=$MAC
-HOSTNAME=$INSTANCE
-TAGS="$TAGS"
-EOF
-if [ -n "$GATEWAY" ]; then
- echo GATEWAY=$GATEWAY >> $FILE
-fi
-if [ -n "$SUBNET" ]; then
- echo SUBNET=$SUBNET >> $FILE
-fi
-if [ -n "$GATEWAY6" ]; then
- echo GATEWAY6=$GATEWAY6 >> $FILE
-fi
-if [ -n "$SUBNET6" ]; then
- echo SUBNET6=$SUBNET6 >> $FILE
- eui64=$($MAC2EUI64 $MAC $SUBNET6)
- echo EUI64=$eui64 >> $FILE
-fi
-
-}
-
-function clear_ebtables {
-  TAP=$INTERFACE
-  FROM=FROM${TAP^^}
-  TO=TO${TAP^^}
-
-  exist=$(ebtables -L | grep $TAP)
-
-  if [ ! -z "$exist" ]; then
-    ebtables -D INPUT -i $TAP -j $FROM > /dev/null 2>&1
-    ebtables -D FORWARD -i $TAP -j $FROM > /dev/null 2>&1
-    ebtables -D FORWARD -o $TAP -j $TO > /dev/null 2>&1
-    ebtables -D OUTPUT -o $TAP -j $TO > /dev/null 2>&1
-
-    ebtables -X $FROM > /dev/null 2>&1
-    ebtables -X $TO > /dev/null 2>&1
-  fi
 }
 
 function setup_ebtables {
@@ -136,7 +108,9 @@ function setup_ebtables {
 
   ebtables -N $FROM
   # do not allow changes in ip-mac pair
-  ebtables -A $FROM --ip-source \! $IP -p ipv4 -j DROP
+  if [ -n "$IP"]; then
+    ebtables -A $FROM --ip-source \! $IP -p ipv4 -j DROP
+  fi
   ebtables -A $FROM -s \! $MAC -j DROP
   ebtables -A FORWARD -i $TAP -j $FROM
   ebtables -N $TO
@@ -155,6 +129,27 @@ function setup_ebtables {
   fi
 }
 
+
+function setup_nfdhcpd {
+	umask 022
+  FILE=$NFDHCPD_STATE_DIR/$INTERFACE
+  #IFACE is the interface from which the packet seems to arrive
+  #needed in bridged mode where the packets seems to arrive from the
+  #bridge and not from the tap
+	cat >$FILE <<EOF
+INDEV=$1
+IP=$IP
+MAC=$MAC
+HOSTNAME=$INSTANCE
+TAGS="$TAGS"
+GATEWAY=$GATEWAY
+SUBNET=$SUBNET 
+GATEWAY6=$GATEWAY6 
+SUBNET6=$SUBNET6 
+EUI64=$($MAC2EUI64 $MAC $SUBNET6 2>/dev/null)
+EOF
+
+}
 
 
 DEFAULT=/etc/default/snf-network
@@ -179,11 +174,14 @@ if [ -e "$NETFILE" ]; then
   source $NETFILE
 fi
 
+
+TABLE=rt_$NETWORK
+clear_routed_setup_ipv4 > /dev/null 2>&1
+clear_routed_setup_ipv6 > /dev/null 2>&1
+clear_routed_setup_firewall > /dev/null 2>&1
+clear_ebtables > /dev/null 2>&1
+
 if [ "$MODE" = "routed" ]; then
-  TABLE=rt_$NETWORK
-	# special proxy-ARP/NDP routing mode
-  clear_tap > /dev/null 2>&1
-  clear_ebtables >/dev/null 2>&1
 	# use a constant predefined MAC address for the tap
 	ip link set $INTERFACE addr $TAP_CONSTANT_MAC
 	# bring the tap up
@@ -194,13 +192,11 @@ if [ "$MODE" = "routed" ]; then
 
 	routed_setup_ipv4 > /dev/null 2>&1
 	routed_setup_ipv6 > /dev/null 2>&1
-	routed_setup_firewall
+	routed_setup_firewall > /dev/null 2>&1
 	setup_nfdhcpd $INTERFACE
 elif [ "$MODE" = "bridged" ]; then
-  clear_tap > /dev/null 2>&1
-  clear_ebtables >/dev/null 2>&1
 	ifconfig $INTERFACE 0.0.0.0 up
 	brctl addif $BRIDGE $INTERFACE
 	setup_nfdhcpd $BRIDGE
-  setup_ebtables
+  setup_ebtables > /dev/null 2>&1
 fi
