@@ -1,0 +1,31 @@
+#!/bin/bash
+
+MAC2EUI64=/usr/bin/mac2eui64
+
+
+
+host=$(hostname)
+domain=$(hostname -d)
+
+
+if [ "$GANETI_INSTANCE_PRIMARY" != "$host.$domain" ]; then
+  exit 0
+fi
+
+source /etc/default/snf-network
+
+source $CONF
+
+NETWORK=$GANETI_INSTANCE_NIC0_NETWORK
+MODE=$GANETI_INSTANCE_NIC0_MODE
+LINK=$GANETI_INSTANCE_NIC0_LINK
+MAC=$GANETI_INSTANCE_NIC0_MAC
+
+source $SHAREDDIR/networks/$NETWORK
+
+if [ "$MODE" == "routed" ] ; then
+    EUI64=$($MAC2EUI64 $MAC $SUBNET6 2>/dev/null)
+
+    ip -6 neigh del proxy $EUI64 dev $GATEWAY6 >/dev/null 2>&1
+fi
+
