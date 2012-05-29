@@ -616,26 +616,25 @@ class VMNetProxy(object): # pylint: disable=R0902
         """
         ns = IPv6(payload.get_data())
 
-        binding = None
-        for b in self.clients.values():
-          if b.eui64 == ns.tgt:
-            binding = b
-            break
+        logging.debug("lladdr %s  src %sns.lladdr" , ns.lladdr, ns.src)
 
-        if binding is None:
-            logging.debug("Ignoring neighbour solicitation on"
-                          " for eui64 %s", ns.tgt)
-            # We don't know what to do with this packet, so let the kernel
-            # handle it
-            payload.set_verdict(nfqueue.NF_ACCEPT)
-            return
+        try:
+          binding = self.clients[ns.lladdr]
+        except:
+          logging.debug("Ignoring neighbour solicitation for eui64 %s", ns.tgt)
+          # We don't know what to do with this packet, so let the kernel
+          # handle it
+          payload.set_verdict(nfqueue.NF_ACCEPT)
+          return
 
-        payload.set_verdict(nfqueue.NF_DROP)
 
         subnet = binding.net6
         if subnet.net is None:
           logging.debug("No IPv6 network assigned for the interface")
+          payload.set_verdict(nfqueue.NF_ACCEPT)
           return
+
+        payload.set_verdict(nfqueue.NF_DROP)
 
         indevmac = self.get_iface_hw_addr(binding.indev)
 
