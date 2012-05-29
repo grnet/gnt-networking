@@ -65,7 +65,7 @@ function routed_setup_ipv4 {
 function routed_setup_ipv6 {
 	# Add a routing entry for the eui-64
 	prefix=$SUBNET6
-	uplink=$GATEWAY6
+	uplink=$PUBLIC_VLAN
 	eui64=$($MAC2EUI64 $MAC $prefix)
 
   
