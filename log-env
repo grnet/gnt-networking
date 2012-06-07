@@ -1,0 +1,15 @@
+#!/bin/bash
+
+source /etc/default/snf-network
+source $CONF
+
+cat <<EOF >> $STATE_DIR/env
+#
+#
+#
+`date`
+#
+#
+#
+EOF  
+env >> $STATE_DIR/env
