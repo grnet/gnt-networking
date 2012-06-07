@@ -163,7 +163,7 @@ def parse_binding_file(path):
         elif line.startswith("EUI64="):
             eui64 = get_value(line)
 
-    return Client(tap=tap, mac=mac, ip=ip, 
+    return Client(tap=tap, mac=mac, ip=ip,
                   hostname=hostname, indev=indev, subnet=subnet,
                   gateway=gateway, subnet6=subnet6, gateway6=gateway6, eui64=eui64 )
 
@@ -190,7 +190,7 @@ class ClientFileHandler(pyinotify.ProcessEvent):
 
 
 class Client(object):
-    def __init__(self, tap=None, indev=None, mac=None, ip=None, hostname=None, 
+    def __init__(self, tap=None, indev=None, mac=None, ip=None, hostname=None,
                  subnet=None, gateway=None, subnet6=None, gateway6=None, eui64=None ):
         self.mac = mac
         self.ip = ip
@@ -449,7 +449,7 @@ class VMNetProxy(object): # pylint: disable=R0902
         binding = parse_binding_file(path)
         if binding is None:
             return
-        ifindex = self.get_ifindex(binding.indev)
+        ifindex = self.get_ifindex(binding.tap)
 
         if ifindex is None:
             logging.warn("Stale configuration for %s found", tap)
@@ -475,6 +475,8 @@ class VMNetProxy(object): # pylint: disable=R0902
         """
         # Decode the response - NFQUEUE relays IP packets
         pkt = IP(payload.get_data())
+        logging.debug("IN DHCP RESPONCE")
+        logging.debug(pkt.show())
 
         # Get the client MAC address
         resp = pkt.getlayer(BOOTP).copy()
@@ -573,6 +575,8 @@ class VMNetProxy(object): # pylint: disable=R0902
 
         """
         pkt = IPv6(payload.get_data())
+        logging.debug("IN RS RESPONCE")
+        logging.debug(pkt.show())
         mac = pkt.lladdr
         logging.debug("rs for mac %s", mac)
         try:
@@ -584,7 +588,7 @@ class VMNetProxy(object): # pylint: disable=R0902
             # handle it
             payload.set_verdict(nfqueue.NF_ACCEPT)
             return
-  
+
         # Signal the kernel that it shouldn't further process the packet
         payload.set_verdict(nfqueue.NF_DROP)
 
@@ -615,8 +619,10 @@ class VMNetProxy(object): # pylint: disable=R0902
 
         """
         ns = IPv6(payload.get_data())
+        logging.debug("IN NS RESPONCE")
+        logging.debug(ns.show())
 
-        logging.debug("lladdr %s  src %sns.lladdr" , ns.lladdr, ns.src)
+        logging.debug("dst %s  tgt %s" , ns.dst, ns.tgt)
 
         try:
           binding = self.clients[ns.lladdr]
@@ -626,7 +632,6 @@ class VMNetProxy(object): # pylint: disable=R0902
           # handle it
           payload.set_verdict(nfqueue.NF_ACCEPT)
           return
-
 
         subnet = binding.net6
         if subnet.net is None:
