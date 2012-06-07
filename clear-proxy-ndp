@@ -9,27 +9,26 @@ domain=$(hostname -d)
 
 echo `date` > /home/dimara/asdfadsf
 
-if [ "$GANETI_INSTANCE_PRIMARY" != "$host.$domain" ]; then
-  exit 0
+if [ "$GANETI_INSTANCE_PRIMARY" == "$host.$domain" ]; then
+
+  source /etc/default/snf-network
+
+  source $CONF
+
+  NETWORK=$GANETI_INSTANCE_NIC0_NETWORK
+  MODE=$GANETI_INSTANCE_NIC0_MODE
+  LINK=$GANETI_INSTANCE_NIC0_LINK
+  MAC=$GANETI_INSTANCE_NIC0_MAC
+  SUBNET6=$INSTANCE_NIC0_NETWORK_SUBNET6
+  
+  source $SHAREDDIR/infra/$host
+
+  if [ "$MODE" == "routed" ] ; then
+      EUI64=$($MAC2EUI64 $MAC $SUBNET6 2>/dev/null)
+      echo $EUI64 >> /home/dimara/asdfadsf
+
+      ip -6 neigh del proxy $EUI64 dev $PUBLIC_VLAN >/dev/null 2>&1
+  fi
+
+  echo $GANETI_INSTANCE_PRIMARY >> /home/dimara/asdfadsf
 fi
-
-source /etc/default/snf-network
-
-source $CONF
-
-NETWORK=$GANETI_INSTANCE_NIC0_NETWORK
-MODE=$GANETI_INSTANCE_NIC0_MODE
-LINK=$GANETI_INSTANCE_NIC0_LINK
-MAC=$GANETI_INSTANCE_NIC0_MAC
-
-source $SHAREDDIR/networks/$NETWORK
-source $SHAREDDIR/infra/$host
-
-if [ "$MODE" == "routed" ] ; then
-    EUI64=$($MAC2EUI64 $MAC $PUBLIC_VLAN 2>/dev/null)
-    echo $EUI64 >> /home/dimara/asdfadsf
-
-    ip -6 neigh del proxy $EUI64 dev $PUBLIC_VLAN >/dev/null 2>&1
-fi
-
-echo $GANETI_INSTANCE_PRIMARY >> /home/dimara/asdfadsf
