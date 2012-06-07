@@ -168,13 +168,6 @@ if [ -e "$CLUSTERINFRAFILE" ]; then
   source $CLUSTERINFRAFILE
 fi
 
-NETFILE=$SHAREDDIR/networks/$NETWORK
-
-if [ -e "$NETFILE" ]; then
-  source $NETFILE
-fi
-
-
 TABLE=rt_$NETWORK
 clear_routed_setup_ipv4 > /dev/null 2>&1
 clear_routed_setup_ipv6 > /dev/null 2>&1
