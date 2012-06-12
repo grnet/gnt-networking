@@ -1,0 +1,11 @@
+#!/bin/bash
+
+source /etc/default/snf-network
+
+source $CONF
+
+INFRA=$STATE_DIR/infra
+
+NETMASK=$(ipcalc $SUBNET | grep Netmask | awk '{print $4}')
+ip addr del $GATEWAY/$NETMASK dev $BRIDGE
+iptables -t nat -D POSTROUTING -s $SUBNET \! -d $SUBNET -j MASQUERADE

@@ -6,26 +6,33 @@ source $DEFAULT
 source $CONF
 source $INFRA
 
-HOSTNAME=$(hostname)
-
-HOSTINFRA=$SHAREDDIR/infra/$HOSTNAME
-CLUSTERINFRA=$SHAREDDIR/infra/cluster
+HOSTINFRA=$STATE_DIR/infra
 
 PUBLIC_IFACE=$(ip route | grep default | awk '{print $5}')
 PUBLIC_MAC=$(ip link show $PUBLIC_IFACE | grep link/ether | awk '{print $2}')
 
-echo PUBLIC_IFACE=$PUBLIC_IFACE > $HOSTINFRA
+cp $INFRA $HOSTINFRA
+
+echo >> $HOSTINFRA
+echo "# node's public interface" >> $HOSTINFRA
+echo PUBLIC_IFACE=$PUBLIC_IFACE >> $HOSTINFRA
+
+echo >> $HOSTINFRA
+echo "# node's public interface MAC" >> $HOSTINFRA
 echo PUBLIC_MAC=$PUBLIC_MAC >> $HOSTINFRA
 
-source $CLUSTERINFRA
-
-if [ -n "$PUBLIC_VLAN_ID" ]; then
+if [ -n $PUBLIC_VLAN_ID ]; then
   PUBLIC_VLAN=$PUBLIC_IFACE.$PUBLIC_VLAN_ID
+  echo >> $HOSTINFRA
   echo PUBLIC_VLAN=$PUBLIC_VLAN >> $HOSTINFRA
 fi
 
-if [ -n "$PRIVATE_VLAN_ID" ]; then
+if [ -n $PRIVATE_VLAN_ID ]; then
   PRIVATE_VLAN=$PUBLIC_IFACE.$PRIVATE_VLAN_ID
+  echo >> $HOSTINFRA
   echo PRIVATE_VLAN=$PRIVATE_VLAN >> $HOSTINFRA
+  PRIVATE_BRIDGE=$BRIDGE_PREFIX$PRIVATE_VLAN_ID
+  echo >> $HOSTINFRA
+  echo PRIVATE_BRIDGE=$PRIVATE_BRIDGE >> $HOSTINFRA
 fi
 

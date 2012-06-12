@@ -9,31 +9,39 @@ source $INFRA
 HOSTNAME=$(hostname)
 
 
-INTERFACES=$SHAREDDIR/interfaces/$HOSTNAME
-HOSTINFRA=$SHAREDDIR/infra/$HOSTNAME
-CLUSTERINFRA=$SHAREDDIR/infra/cluster
+INTERFACES=$STATE_DIR/interfaces
+HOSTINFRA=$STATE_DIR/infra
 
-if [ -e "$HOSTINFRA" ]; then
-  source $HOSTINFRA
-fi
-
-source $CLUSTERINFRA
-
-if [ -n "$PUBLIC_BRIDGE" -a -e /proc/sys/net/ipv4/conf/$PUBLIC_BRIDGE ]; then 
-  echo Interfaces already exist! Please check: 
-  echo $PUBLIC_BRIDGE for bridging TAPs with public IPs
-  exit 1
-elif [ -n "$PUBLIC_VLAN" -a -e /proc/sys/net/ipv4/conf/$PUBLIC_VLAN -o \
-       -n "$PRIVATE_BRIDGE" -a -e /proc/sys/net/ipv4/conf/$PRIVATE_BRIDGE -o \
-       -n "$PRIVATE_VLAN" -a -e /proc/sys/net/ipv4/conf/$PRIVATE_VLAN ]; then
-  echo Interfaces already exist! Please check: 
-  echo $PUBLIC_BRIDGE for bridging TAPs with public IPs
-  echo $PUBLIC_VLAN for routing TAPs with public IPs
-  echo $PRIVATE_VLAN  bridged on $PRIVATE_BRIDGE for private LANs
+if [ ! -a $HOSTFILE ]; then 
+  echo "A host infra file must exist" 
+  echo "Run snf-network-build-host-infra"
   exit 1
 fi
 
+source $HOSTINFRA
 
+DONOTIFUP=false
+
+check_iface(){
+
+  if [ -n "$1" -a -e /proc/sys/net/ipv4/conf/$1 ]; then 
+    echo Interface $1 already exist! Please check
+    export DONOTIFUP=true
+  fi
+}
+
+
+check_iface "$PUBLIC_BRIDGE"
+check_iface "$PUBLIC_IFACE.$PUBLIC_VLAN_ID"
+check_iface "$PUBLIC_IFACE.$PRIVATE_VLAN_ID"
+check_iface "$BRIDGE_PREFIX$PRIVATE_VLAN_ID"
+
+if [ -n "$PRIVATE_VLAN_ID_OFFSET" ]; then
+  for id in `seq $PRIVATE_VLAN_ID_MIN 1 $PRIVATE_VLAN_ID_MAX`; do
+    check_iface $BRIDGE_PREFIX$((PRIVATE_VLAN_ID_OFFSET+id))
+    check_iface $PUBLIC_IFACE.$((PRIVATE_VLAN_ID_OFFSET+id))
+  done
+fi
 
 if [ -n "$PUBLIC_BRIDGE" -a -n "$PUBLIC_IFACE" ]; then
   cat > $INTERFACES<<EOF
@@ -48,8 +56,7 @@ EOF
 
 else
   if [ -n "$PUBLIC_VLAN" ]; then
-    echo PUBLIC_VLAN=$PUBLIC_VLAN >> $HOSTINFRA
-    cat >> $INTERFACES<<EOF
+    cat > $INTERFACES<<EOF
 auto $PUBLIC_VLAN
 iface $PUBLIC_VLAN inet manual
 
@@ -57,7 +64,6 @@ EOF
   fi
 
   if [ -n "$PRIVATE_VLAN" -a -n "$PRIVATE_BRIDGE" ]; then
-    echo PRIVATE_VLAN=$PRIVATE_VLAN >> $HOSTINFRA
     cat >> $INTERFACES<<EOF
 auto $PRIVATE_VLAN
 iface $PRIVATE_VLAN inet manual
@@ -70,12 +76,30 @@ iface $PRIVATE_BRIDGE inet manual
   post-up ip link set $PRIVATE_BRIDGE address $PUBLIC_MAC 
 
 EOF
-
   fi
+
+  if [ -n "$PRIVATE_VLAN_ID_OFFSET" ]; then
+     HELPER="$PRIVATE_VLAN_ID_MIN $PRIVATE_VLAN_ID_MAX $PRIVATE_VLAN_ID_OFFSET"
+     cat >> $INTERFACES<<EOF
+auto prv
+iface prv inet manual
+    up   prv-net-helper up   $PUBLIC_IFACE $HELPER $BRIDGE_PREFIX
+    down prv-net-helper down $PUBLIC_IFACE $HELPER $BRIDGE_PREFIX
+
+EOF
+  fi
+    
 fi
 
-ifup -i $INTERFACES -a
 
+if $DONOTIFUP; then
+  echo Check interfaces:
+  cat $INTERFACES
+  exit 1
+fi
 
 echo 1 > /proc/sys/net/ipv4/conf/all/forwarding
+echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
 echo 1 > /proc/sys/net/ipv4/ip_forward
+
+ifup -i $INTERFACES -a

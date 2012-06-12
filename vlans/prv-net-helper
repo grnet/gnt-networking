@@ -1,11 +1,11 @@
 #!/bin/bash
 
 function usage {
-	echo "Usage: $0 <mode> <parent interface> <prv min> <prv max> <offset>"
+	echo "Usage: $0 <mode> <parent interface> <prv min> <prv max> <offset> <bridge prefix>"
 	exit 1
 }
 
-if [ $# -ne 5 ]; then
+if [ $# -ne 6 ]; then
 	usage
 fi
 
@@ -14,12 +14,13 @@ function up {
 	prv_min=$2
 	prv_max=$3
 	offset=$4
+  prefix=$5
 
 	echo "Adding VLANs $2 - $3"
 	vconfig set_name_type DEV_PLUS_VID_NO_PAD
 	for prv in $(seq $prv_min $prv_max); do
 		vlan=$(($prv+$offset))
-		bridge=prv$prv
+		bridge=$prefix$prv
 
 		vconfig add $iface $vlan
 		ifconfig $iface.$vlan up
@@ -39,7 +40,7 @@ function down {
 	echo "Removing VLANs $2 - $3"
 	for prv in $(seq $prv_min $prv_max); do
 		vlan=$(($prv+$offset))
-		bridge=prv$prv
+		bridge=$prefix$prv
 
 		(
 		ifconfig $bridge down

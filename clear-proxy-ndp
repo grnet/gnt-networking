@@ -7,28 +7,20 @@ MAC2EUI64=/usr/bin/mac2eui64
 host=$(hostname)
 domain=$(hostname -d)
 
-echo `date` > /home/dimara/asdfadsf
 
-if [ "$GANETI_INSTANCE_PRIMARY" == "$host.$domain" ]; then
-
-  source /etc/default/snf-network
-
-  source $CONF
+if [ "$GANETI_INSTANCE_PRIMARY" = "$host.$domain" ]; then
 
   NETWORK=$GANETI_INSTANCE_NIC0_NETWORK
+  NETWORK_TYPE=$GANETI_INSTANCE_NIC0_NETWORK_TYPE
   MODE=$GANETI_INSTANCE_NIC0_MODE
   LINK=$GANETI_INSTANCE_NIC0_LINK
   MAC=$GANETI_INSTANCE_NIC0_MAC
-  SUBNET6=$INSTANCE_NIC0_NETWORK_SUBNET6
+  SUBNET6=$GANETI_INSTANCE_NIC0_NETWORK_SUBNET6
   
-  source $SHAREDDIR/infra/$host
-
-  if [ "$MODE" == "routed" ] ; then
+  if [ "$MODE" = "routed" -a "$NETWORK_TYPE" = "public" ] ; then
       EUI64=$($MAC2EUI64 $MAC $SUBNET6 2>/dev/null)
-      echo $EUI64 >> /home/dimara/asdfadsf
-
       ip -6 neigh del proxy $EUI64 dev $PUBLIC_VLAN >/dev/null 2>&1
   fi
-
-  echo $GANETI_INSTANCE_PRIMARY >> /home/dimara/asdfadsf
 fi
+
+echo done

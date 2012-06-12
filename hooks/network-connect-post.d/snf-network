@@ -4,86 +4,27 @@ source /etc/default/snf-network
 
 source $CONF
 
-GROUP=$GANETI_GROUP_NAME
+INFRA=$STATE_DIR/infra
+
+source $INFRA
+
 NETWORK=$GANETI_GROUP_NETWORK_NAME
 MODE=$GANETI_GROUP_NETWORK_MODE
 LINK=$GANETI_GROUP_NETWORK_LINK
 
-HOSTNAME=$(hostname)
-
-NETFILE=$SHAREDDIR/networks/$NETWORK
-NODEMAPFILE=$SHAREDDIR/mappings/$NETWORK-$HOSTNAME
-NODEINFRAFILE=$SHAREDDIR/infra/$HOSTNAME
-
-RT_TABLES=/etc/iproute2/rt_tables
+snf-network-get-network-env
 
 
-if [ -e $NODEMAPFILE ]; then
-  exit 0
+if [ "$MODE" = "routed" -a "$TYPE" = "public" ]; then
+
+  snf-network-ipless-routing-on
+
 fi
 
 
-cat > $NODEMAPFILE <<EOF
-MODE=$MODE
-LINK=$LINK
-EOF
+if [ -a $ENABLE_MASQ \
+     -a -n "$GATEWAY" -a "$MODE" = "bridged" -a "$TYPE" = "private" ]; then
 
+  snf-network-masq-on
 
-source $NODEINFRAFILE
-source $NETFILE
-
-if [ "$MODE" == "routed" ]; then 
-  TABLE=rt_$NETWORK
-  if [ "$TYPE" == "public" ]; then
-    VLAN=$PUBLIC_VLAN
-    ARP_IP=$(ipcalc $SUBNET | grep HostMax | awk '{print $2}')
-    
-    ip link set $VLAN up
-
-    echo 1 > "/proc/sys/net/ipv4/conf/$VLAN/proxy_arp"
-
-    ID=$(wc -l < $RT_TABLES)
-    echo $((ID+1)) $TABLE >> $RT_TABLES
-
-    if [ -n "$SUBNET" ]; then
-      ip rule add iif $VLAN table $TABLE
-
-      ip route add $SUBNET dev $VLAN table main 
-
-      ip route add $SUBNET dev $VLAN table $TABLE
-      if [ -n "$GATEWAY" ]; then
-        ip route add default via $GATEWAY dev $VLAN table $TABLE
-      fi
-      echo 1 > /proc/sys/net/ipv4/conf/all/forwarding
-
-      arptables -A OUTPUT -o $VLAN --opcode request -j mangle --mangle-ip-s  $ARP_IP 
-    fi
-
-    if [ -n "$SUBNET6" ]; then
-      ip -6 rule add iif $VLAN table $TABLE
-      ip -6 route add $SUBNET6 dev $VLAN table main
-      ip -6 route add $SUBNET6 dev $VLAN table $TABLE
-      if [ -n "$GATEWAY6" ]; then
-        ip -6 route add default via $GATEWAY6 dev $VLAN table $TABLE
-      fi
-      echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
-      echo 1 > /proc/sys/net/ipv6/conf/$VLAN/proxy_ndp
-    fi
-  fi
 fi
-
-
-
-if [ "$MODE" == "bridged" ]; then
-  BRIDGE=$LINK
-  if [ ! -z "$GATEWAY" -a $ENABLE_MASQ ]; then
-    if [ "$TYPE" == "private" ]; then 
-      if [ "$HOSTNAME" == "$ROUTER" ]; then
-        NETMASK=$(ipcalc $SUBNET | grep Netmask | awk '{print $4}')
-        ip addr add $GATEWAY/$NETMASK dev $BRIDGE
-        iptables -t nat -A POSTROUTING -s $SUBNET \! -d 192.168.0.0/16 -j MASQUERADE
-      fi  
-    fi
-  fi
-fi
-

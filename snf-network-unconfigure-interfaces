@@ -4,11 +4,8 @@ DEFAULT=/etc/default/snf-network
 
 source $DEFAULT
 source $CONF
-source $INFRA
 
-HOSTNAME=$(hostname)
-
-INTERFACES=$SHAREDDIR/interfaces/$HOSTNAME
+INTERFACES=$STATE_DIR/interfaces
 
 if [ -e "$INTERFACES" ]; then
   ifdown -i $INTERFACES -a --force

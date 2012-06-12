@@ -2,29 +2,6 @@
 # This script run in master-node after cluster init
 # Propably should run after master failover
 
-source /etc/default/snf-network
-
-source $CONF
-source $INFRA
-
-MASTERNODE=$(hostname)
-
-CLUSTERINFRA=$SHAREDDIR/infra/cluster
-
-#build subdirs in shared dir
-snf-network-enable
-
-
-cp $INFRA $CLUSTERINFRA
-
-if $ENABLE_MASQ; then
-  PUBLIC_IFACE=$(ip route | grep default | awk '{print $5}')
-  PUBLIC_MAC=$(ip link show $PUBLIC_IFACE | grep link/ether | awk '{print $2}')
-
-  echo ROUTER=$MASTERNODE >> $CLUSTERINFRA
-  echo ROUTER_MAC=$PUBLIC_MAC >> $CLUSTERINFRA
-fi
-
 snf-network-build-node-infra
 
 snf-network-configure-interfaces

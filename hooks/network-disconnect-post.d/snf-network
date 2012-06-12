@@ -4,73 +4,27 @@ source /etc/default/snf-network
 
 source $CONF
 
+INFRA=$STATE_DIR/infra
+
+source $INFRA
+
 NETWORK=$GANETI_GROUP_NETWORK_NAME
 MODE=$GANETI_GROUP_NETWORK_MODE
 LINK=$GANETI_GROUP_NETWORK_LINK
 
-HOSTNAME=$(hostname)
-
-NETFILE=$SHAREDDIR/networks/$NETWORK
-NODEMAPFILE=$SHAREDDIR/mappings/$NETWORK-$HOSTNAME
-NODEINFRAFILE=$SHAREDDIR/infra/$HOSTNAME
-CLUSTERINFRAFILE=$SHAREDDIR/infra/cluster
-
-RT_TABLES=/etc/iproute2/rt_tables
+snf-network-get-network-env
 
 
-if [ ! -e $NODEMAPFILE ]; then
-  exit 0
-fi
+if [ "$MODE" = "routed" -a "$TYPE" = "public" ]; then
 
-source $NODEINFRAFILE
-source $CLUSTERINFRAFILE
-source $NETFILE
-source $NODEMAPFILE
+  snf-network-ipless-routing-off
 
-if [ "$MODE" == "routed" ]; then 
-  TABLE=rt_$NETWORK
-  if [ "$TYPE" == "public" ]; then
-    VLAN=$PUBLIC_VLAN
-    ARP_IP=$(ipcalc $SUBNET | grep HostMax | awk '{print $2}')
-  
-    if [ -n "$SUBNET" ]; then
-      arptables -D OUTPUT -o $VLAN --opcode request -j mangle --mangle-ip-s  $ARP_IP 
-      if [ -n "$GATEWAY" ]; then  
-        ip route del default via $GATEWAY dev $VLAN table $TABLE
-      fi
-
-      ip route del $SUBNET dev $VLAN table $TABLE
-
-      ip route del $SUBNET dev $VLAN table main 
-
-      ip rule del iif $VLAN table $TABLE
-    fi
-    if [ -n "$SUBNET6" ]; then
-      if [ -n "$GATEWAY6" ]; then
-        ip -6 route del default via $GATEWAY6 dev $VLAN table $TABLE
-      fi
-      ip -6 route add $SUBNET6 dev $VLAN table $TABLE
-      ip -6 route add $SUBNET6 dev $VLAN table main
-      ip -6 rule add iff $VLAN table $TABLE
-    fi
-    sed -i 's/.*'"$TABLE"'$//' $RT_TABLES
-    
-  fi
 fi
 
 
+if [ -a $ENABLE_MASQ \
+     -a -n "$GATEWAY" -a "$MODE" = "bridged" -a "$TYPE" = "private" ]; then
 
-if [ "$MODE" == "bridged" ]; then
-  BRIDGE=$LINK
-  if [ ! -z "$GATEWAY" -a $ENABLE_MASQ]; then
-    if [ "$TYPE" == "private" ]; then 
-      if [ "$HOSTNAME" == "$ROUTER" ]; then
-        NETMASK=$(ipcalc $SUBNET | grep Netmask | awk '{print $4}')
-        ip addr del $GATEWAY/$NETMASK dev $BRIDGE
-        iptables -t nat -D POSTROUTING -s $SUBNET \! -d 192.168.0.0/16 -j MASQUERADE
-      fi  
-    fi
-  fi
+  snf-network-masq-off
+
 fi
-
-rm $NODEMAPFILE

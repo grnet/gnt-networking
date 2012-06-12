@@ -117,15 +117,13 @@ function setup_ebtables {
   ebtables -A FORWARD -o $TAP -j $TO
   #accept dhcp responses from host (nfdhcpd)
   ebtables -A $TO -p ipv4 --ip-protocol=udp  --ip-destination-port=68 -j ACCEPT
-  if [ "$TYPE" == "private" ]; then
-    if [ ! -z "$GATEWAY" -a $ENABLE_MASQ ]; then
-      # allow packets from/to router (for masquerading
-      ebtables -A $TO -s $ROUTER_MAC -j ACCEPT
-      ebtables -A INPUT -i $TAP -j $FROM
-      ebtables -A OUTPUT -o $TAP -j $TO
-    fi
-    # allow only packets from the same mac prefix
-    ebtables -A $TO -s \! $MAC/$MAC_MASK -j DROP
+  # allow only packets from the same mac prefix
+  ebtables -A $TO -s \! $MAC/$MAC_MASK -j DROP
+  if [ $ENABLE_MASQ -a -n "$GATEWAY" ]; then
+    # allow packets from/to router (for masquerading)
+    ebtables -A $TO -s $PUBLIC_MAC -j ACCEPT
+    ebtables -A INPUT -i $TAP -j $FROM
+    ebtables -A OUTPUT -o $TAP -j $TO
   fi
 }
 
@@ -156,25 +154,18 @@ DEFAULT=/etc/default/snf-network
 source $DEFAULT
 source $CONF
 
-NODEINFRAFILE=$SHAREDDIR/infra/$(hostname)
+INFRA=$STATE_DIR/infra
 
-if [ -e "$NODEINFRAFILE" ]; then
-  source $NODEINFRAFILE
-fi
+source $INFRA
 
-CLUSTERINFRAFILE=$SHAREDDIR/infra/cluster
 
-if [ -e "$CLUSTERINFRAFILE" ]; then
-  source $CLUSTERINFRAFILE
-fi
-
-TABLE=rt_$NETWORK
 clear_routed_setup_ipv4 > /dev/null 2>&1
 clear_routed_setup_ipv6 > /dev/null 2>&1
 clear_routed_setup_firewall > /dev/null 2>&1
 clear_ebtables > /dev/null 2>&1
 
 if [ "$MODE" = "routed" ]; then
+  TABLE=$LINK
 	# use a constant predefined MAC address for the tap
 	ip link set $INTERFACE addr $TAP_CONSTANT_MAC
 	# bring the tap up
@@ -191,5 +182,7 @@ elif [ "$MODE" = "bridged" ]; then
 	ifconfig $INTERFACE 0.0.0.0 up
 	brctl addif $BRIDGE $INTERFACE
 	setup_nfdhcpd $BRIDGE
-  setup_ebtables > /dev/null 2>&1
+  if [ $ENABLE_EBTABLES -a "$TYPE" = "private" ]; then
+    setup_ebtables > /dev/null 2>&1
+  fi
 fi

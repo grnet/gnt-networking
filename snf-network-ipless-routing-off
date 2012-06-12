@@ -1,0 +1,35 @@
+#!/bin/bash
+
+source /etc/default/snf-network
+
+source $CONF
+
+RT_TABLES=/etc/iproute2/rt_tables
+
+TABLE=$LINK
+VLAN=$PUBLIC_VLAN
+ARP_IP=$(ipcalc $SUBNET | grep HostMax | awk '{print $2}')
+
+ip link set $VLAN up
+
+if [ -n "$SUBNET" ]; then
+  arptables -D OUTPUT -o $VLAN --opcode request -j mangle --mangle-ip-s $ARP_IP 
+  if [ -n "$GATEWAY" ]; then  
+    ip route del default via $GATEWAY dev $VLAN table $TABLE
+  fi
+  ip route del $SUBNET dev $VLAN table $TABLE
+  ip route del $SUBNET dev $VLAN table main 
+  ip rule del iif $VLAN table $TABLE
+fi
+
+if [ -n "$SUBNET6" ]; then
+  if [ -n "$GATEWAY6" ]; then
+    ip -6 route del default via $GATEWAY6 dev $VLAN table $TABLE
+  fi
+  ip -6 route add $SUBNET6 dev $VLAN table $TABLE
+  ip -6 route add $SUBNET6 dev $VLAN table main
+  ip -6 rule add iif $VLAN table $TABLE
+fi
+
+sed -i 's/.*'"$TABLE"'$//' $RT_TABLES
+
