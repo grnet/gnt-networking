@@ -2,6 +2,10 @@
 # This script run in master-node after cluster init
 # Propably should run after master failover
 
-snf-network-build-node-infra
+if $ENABLE_AUTO_CONF_HOOKS; then
 
-snf-network-configure-interfaces
+  snf-network-build-node-infra
+
+  snf-network-configure-interfaces
+
+fi

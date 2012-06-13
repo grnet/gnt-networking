@@ -4,12 +4,16 @@ source /etc/default/snf-network
 
 source $CONF
 
-NODE=$GANETI_NODE_NAME
+if $ENABLE_AUTO_CONF_HOOKS; then
 
-HOSTNAME=$(hostname)
+  NODE=$GANETI_NODE_NAME
 
-if [ "$HOSTNAME" = "$NODE" ]; then
-  snf-network-build-node-infra
+  HOSTNAME=$(hostname)
 
-  snf-network-configure-interfaces
+  if [ "$HOSTNAME" = "$NODE" ]; then
+    snf-network-build-node-infra
+
+    snf-network-configure-interfaces
+  fi
+
 fi

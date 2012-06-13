@@ -4,27 +4,31 @@ source /etc/default/snf-network
 
 source $CONF
 
-INFRA=$STATE_DIR/infra
+if $ENABLE_AUTO_CONF_HOOKS; then
+  
+  INFRA=$STATE_DIR/infra
 
-source $INFRA
+  source $INFRA
 
-NETWORK=$GANETI_GROUP_NETWORK_NAME
-MODE=$GANETI_GROUP_NETWORK_MODE
-LINK=$GANETI_GROUP_NETWORK_LINK
+  NETWORK=$GANETI_GROUP_NETWORK_NAME
+  MODE=$GANETI_GROUP_NETWORK_MODE
+  LINK=$GANETI_GROUP_NETWORK_LINK
 
-snf-network-get-network-env
-
-
-if [ "$MODE" = "routed" -a "$TYPE" = "public" ]; then
-
-  snf-network-ipless-routing-on
-
-fi
+  snf-network-get-network-env
 
 
-if [ -a $ENABLE_MASQ \
-     -a -n "$GATEWAY" -a "$MODE" = "bridged" -a "$TYPE" = "private" ]; then
+  if [ "$MODE" = "routed" -a "$TYPE" = "public" ]; then
 
-  snf-network-masq-on
+    snf-network-ipless-routing-on
+
+  fi
+
+
+  if [ -a $ENABLE_MASQ \
+       -a -n "$GATEWAY" -a "$MODE" = "bridged" -a "$TYPE" = "private" ]; then
+
+    snf-network-masq-on
+
+  fi
 
 fi
