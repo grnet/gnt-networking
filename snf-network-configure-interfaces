@@ -34,12 +34,12 @@ check_iface(){
 check_iface "$PUBLIC_BRIDGE"
 check_iface "$PUBLIC_IFACE.$PUBLIC_VLAN_ID"
 check_iface "$PUBLIC_IFACE.$PRIVATE_VLAN_ID"
-check_iface "$BRIDGE_PREFIX$PRIVATE_VLAN_ID"
+check_iface "$PRIVATE_BRIDGE"
 
 if [ -n "$PRIVATE_VLAN_ID_OFFSET" ]; then
   for id in `seq $PRIVATE_VLAN_ID_MIN 1 $PRIVATE_VLAN_ID_MAX`; do
-    check_iface $BRIDGE_PREFIX$((PRIVATE_VLAN_ID_OFFSET+id))
     check_iface $PUBLIC_IFACE.$((PRIVATE_VLAN_ID_OFFSET+id))
+    check_iface $BRIDGE_PREFIX$id
   done
 fi
 
