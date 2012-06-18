@@ -166,23 +166,23 @@ clear_ebtables > /dev/null 2>&1
 
 if [ "$MODE" = "routed" ]; then
   TABLE=$LINK
-	# use a constant predefined MAC address for the tap
-	ip link set $INTERFACE addr $TAP_CONSTANT_MAC
-	# bring the tap up
-	ifconfig $INTERFACE 0.0.0.0 up
+  # use a constant predefined MAC address for the tap
+  ip link set $INTERFACE addr $TAP_CONSTANT_MAC
+  # bring the tap up
+  ifconfig $INTERFACE 0.0.0.0 up
 
-	# Drop unicast BOOTP/DHCP packets
-	iptables -A FORWARD -i $INTERFACE -p udp --dport 67 -j DROP
+  # Drop unicast BOOTP/DHCP packets
+  iptables -A FORWARD -i $INTERFACE -p udp --dport 67 -j DROP
 
-	routed_setup_ipv4 > /dev/null 2>&1
-	routed_setup_ipv6 > /dev/null 2>&1
-	routed_setup_firewall > /dev/null 2>&1
-	setup_nfdhcpd $INTERFACE
+  routed_setup_ipv4 > /dev/null 2>&1
+  routed_setup_ipv6 > /dev/null 2>&1
+  routed_setup_firewall > /dev/null 2>&1
+  setup_nfdhcpd $INTERFACE
 elif [ "$MODE" = "bridged" ]; then
-	ifconfig $INTERFACE 0.0.0.0 up
-	brctl addif $BRIDGE $INTERFACE
-	setup_nfdhcpd $BRIDGE
-  if [ $ENABLE_EBTABLES -a "$TYPE" = "private" ]; then
+  ifconfig $INTERFACE 0.0.0.0 up
+  brctl addif $BRIDGE $INTERFACE
+  setup_nfdhcpd $BRIDGE
+  if [ $ENABLE_EBTABLES -a "$TYPE" = "private-filtered" ]; then
     setup_ebtables > /dev/null 2>&1
   fi
 fi
