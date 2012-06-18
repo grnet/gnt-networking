@@ -4,8 +4,26 @@ source /etc/default/snf-network
 
 source $CONF
 
-INFRA=$STATE_DIR/infra
+if [ ! -e $STATE_DIR/infra ]; then
+  echo No infra file found!
+  echo run: snf-network-build-node-infra
+  exit 1
+fi
+
+source $STATE_DIR/infra
+
+if [ $# -ne 4 ]; then
+  echo "Usage: $0 <masq bridge> <subnet> <gateway>"
+  exit 1
+fi
+
+#TODO: include this in infra file
+MASQ_BRIDGE=$1
+SUBNET=$2
+GATEWAY=$3
+
 
 NETMASK=$(ipcalc $SUBNET | grep Netmask | awk '{print $4}')
-ip addr del $GATEWAY/$NETMASK dev $BRIDGE
+
+ip addr del $GATEWAY/$NETMASK dev $MASQ_BRIDGE
 iptables -t nat -D POSTROUTING -s $SUBNET \! -d $SUBNET -j MASQUERADE

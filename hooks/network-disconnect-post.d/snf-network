@@ -7,29 +7,27 @@ source $CONF
 
 if $ENABLE_AUTO_CONF_HOOKS; then
 
-  INFRA=$STATE_DIR/infra
-
-  source $INFRA
+  source $STATE_DIR/infra
 
   NETWORK=$GANETI_GROUP_NETWORK_NAME
   MODE=$GANETI_GROUP_NETWORK_MODE
   LINK=$GANETI_GROUP_NETWORK_LINK
 
-  snf-network-get-network-env
+  . snf-network-get-network-env
 
 
   if [ "$MODE" = "routed" -a "$TYPE" = "public-routed" ]; then
 
-    snf-network-ipless-routing-off
+    snf-network-ipless-routing-off "$LINK" "$SUBNET" "$GATEWAY" "$SUBNET6" "$GATEWAY6"
 
   fi
 
 
   if [ -a $ENABLE_MASQ \
-       -a -n "$GATEWAY" -a "$MODE" = "bridged"
-       -a "$TYPE" = "masq" ]; then
+       -a -n "$GATEWAY" -a "$MODE" = "bridged" \
+       -a "$TYPE" = "masq" -a "$LINK" = "$MASQ_BRIDGE" ]; then
 
-    snf-network-masq-off
+    snf-network-masq-off "$LINK" "$SUBNET" "$GATEWAY"
 
   fi
 

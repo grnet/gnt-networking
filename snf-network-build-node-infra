@@ -11,28 +11,35 @@ HOSTINFRA=$STATE_DIR/infra
 PUBLIC_IFACE=$(ip route | grep default | awk '{print $5}')
 PUBLIC_MAC=$(ip link show $PUBLIC_IFACE | grep link/ether | awk '{print $2}')
 
-cp $INFRA $HOSTINFRA
 
-echo >> $HOSTINFRA
-echo "# node's public interface" >> $HOSTINFRA
-echo PUBLIC_IFACE=$PUBLIC_IFACE >> $HOSTINFRA
 
-echo >> $HOSTINFRA
-echo "# node's public interface MAC" >> $HOSTINFRA
-echo PUBLIC_MAC=$PUBLIC_MAC >> $HOSTINFRA
+(
+
+cat $INFRA
+
+echo
+echo "# node's public interface" 
+echo PUBLIC_IFACE=$PUBLIC_IFACE 
+
+echo 
+echo "# node's public interface MAC" 
+echo PUBLIC_MAC=$PUBLIC_MAC
 
 if [ -n "$PUBLIC_VLAN_ID" ]; then
-  PUBLIC_VLAN=$PUBLIC_IFACE.$PUBLIC_VLAN_ID
-  echo >> $HOSTINFRA
-  echo PUBLIC_VLAN=$PUBLIC_VLAN >> $HOSTINFRA
+  echo 
+  echo PUBLIC_VLAN=$PUBLIC_IFACE.$PUBLIC_VLAN_ID
 fi
 
 if [ -n "$PRIVATE_VLAN_ID" ]; then
-  PRIVATE_VLAN=$PUBLIC_IFACE.$PRIVATE_VLAN_ID
-  echo >> $HOSTINFRA
-  echo PRIVATE_VLAN=$PRIVATE_VLAN >> $HOSTINFRA
-  PRIVATE_BRIDGE=$BRIDGE_PREFIX$PRIVATE_BRIDGE_ID
-  echo >> $HOSTINFRA
-  echo PRIVATE_BRIDGE=$PRIVATE_BRIDGE >> $HOSTINFRA
+  echo 
+  echo PRIVATE_VLAN=$PUBLIC_IFACE.$PRIVATE_VLAN_ID
+  echo PRIVATE_BRIDGE=$BRIDGE_PREFIX$PRIVATE_BRIDGE_ID
 fi
 
+if [ -n "$MASQ_VLAN_ID" ]; then
+  echo 
+  echo MASQ_VLAN=$PUBLIC_IFACE.$MASQ_VLAN_ID
+  echo MASQ_BRIDGE=$BRIDGE_PREFIX$MASQ_BRIDGE_ID
+fi
+
+)  > $HOSTINFRA

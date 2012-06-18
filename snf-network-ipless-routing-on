@@ -4,14 +4,31 @@ source /etc/default/snf-network
 
 source $CONF
 
+if [ ! -e $STATE_DIR/infra ]; then 
+  echo No infra file found!
+  echo run: snf-network-build-node-infra
+  exit 1
+fi
+
+source $STATE_DIR/infra
+
+if [ $# -ne 6 ]; then
+  echo "Usage: $0 <routing table> <subnet> <gateway> <subnet6> <gateway6>"
+  exit 1
+fi
+
 RT_TABLES=/etc/iproute2/rt_tables
 
-TABLE=$LINK
+TABLE=$1
+SUBNET=$2
+GATEWAY=$3
+SUBNET6=$4
+GATEWAY6=$5
+
 VLAN=$PUBLIC_VLAN
 ARP_IP=$(ipcalc $SUBNET | grep HostMax | awk '{print $2}')
 
 ip link set $VLAN up
-
 
 ID=$(wc -l < $RT_TABLES)
 echo $((ID+1)) $TABLE >> $RT_TABLES

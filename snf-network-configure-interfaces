@@ -12,7 +12,7 @@ HOSTNAME=$(hostname)
 INTERFACES=$STATE_DIR/interfaces
 HOSTINFRA=$STATE_DIR/infra
 
-if [ ! -a $HOSTFILE ]; then 
+if [ ! -e "$HOSTINFRA" ]; then 
   echo "A host infra file must exist" 
   echo "Run snf-network-build-host-infra"
   exit 1
@@ -23,7 +23,6 @@ source $HOSTINFRA
 DONOTIFUP=false
 
 check_iface(){
-
   if [ -n "$1" -a -e /proc/sys/net/ipv4/conf/$1 ]; then 
     echo Interface $1 already exist! Please check
     export DONOTIFUP=true
@@ -43,8 +42,10 @@ if [ -n "$PRIVATE_VLAN_ID_OFFSET" ]; then
   done
 fi
 
+(
+
 if [ -n "$PUBLIC_BRIDGE" -a -n "$PUBLIC_IFACE" ]; then
-  cat > $INTERFACES<<EOF
+  cat<<EOF
 auto $PUBLIC_BRIDGE
 iface $PUBLIC_BRIDGE inet manual
   bridge_ports $PUBLIC_IFACE
@@ -56,7 +57,7 @@ EOF
 
 else
   if [ -n "$PUBLIC_VLAN" ]; then
-    cat > $INTERFACES<<EOF
+    cat<<EOF
 auto $PUBLIC_VLAN
 iface $PUBLIC_VLAN inet manual
 
@@ -64,7 +65,7 @@ EOF
   fi
 
   if [ -n "$PRIVATE_VLAN" -a -n "$PRIVATE_BRIDGE" ]; then
-    cat >> $INTERFACES<<EOF
+    cat<<EOF
 auto $PRIVATE_VLAN
 iface $PRIVATE_VLAN inet manual
 
@@ -76,11 +77,26 @@ iface $PRIVATE_BRIDGE inet manual
   post-up ip link set $PRIVATE_BRIDGE address $PUBLIC_MAC 
 
 EOF
+  fi  
+
+  if [ -n "$MASQ_VLAN" -a -n "$MASQ_BRIDGE" ]; then
+    cat<<EOF
+auto $MASQ_VLAN
+iface $MASQ_VLAN inet manual
+
+auto $MASQ_BRIDGE
+iface $MASQ_BRIDGE inet manual
+  bridge_ports $MASQ_VLAN
+  bridge_stp off
+  bridge_fd 2
+  post-up ip link set $MASQ_BRIDGE address $PUBLIC_MAC 
+
+EOF
   fi
 
   if [ -n "$PRIVATE_VLAN_ID_OFFSET" ]; then
      HELPER="$PRIVATE_VLAN_ID_MIN $PRIVATE_VLAN_ID_MAX $PRIVATE_VLAN_ID_OFFSET"
-     cat >> $INTERFACES<<EOF
+     cat<<EOF
 auto prv
 iface prv inet manual
     up   prv-net-helper up   $PUBLIC_IFACE $HELPER $BRIDGE_PREFIX
@@ -91,6 +107,7 @@ EOF
     
 fi
 
+) > $INTERFACES
 
 if $DONOTIFUP; then
   echo Check interfaces:
