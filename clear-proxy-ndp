@@ -2,7 +2,10 @@
 
 MAC2EUI64=/usr/bin/mac2eui64
 
+source /etc/default/snf-network
 
+source $CONF
+source $STATE_DIR/infra
 
 host=$(hostname)
 domain=$(hostname -d)
