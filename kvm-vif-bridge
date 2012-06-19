@@ -50,10 +50,10 @@ function clear_ebtables {
 function routed_setup_ipv4 {
 
 	# mangle ARPs to come from the gw's IP
-	arptables -A OUTPUT -o $INTERFACE --opcode request -j mangle --mangle-ip-s    "$GATEWAY"
+	arptables -A OUTPUT -o $INTERFACE --opcode request -j mangle --mangle-ip-s    "$NETWORK_GATEWAY"
 
 	# route interface to the proper routing table
-	ip rule add dev $INTERFACE table $TABLE 
+	ip rule add dev $INTERFACE table $TABLE
 
 	# static route mapping IP -> INTERFACE
 	ip route replace $IP proto static dev $INTERFACE table $TABLE
@@ -64,14 +64,14 @@ function routed_setup_ipv4 {
 
 function routed_setup_ipv6 {
 	# Add a routing entry for the eui-64
-	prefix=$SUBNET6
+	prefix=$NETWORK_SUBNET6
 	uplink=$PUBLIC_VLAN
 	eui64=$($MAC2EUI64 $MAC $prefix)
 
-  
+
 	ip -6 rule add dev $INTERFACE table $TABLE
 	ip -6 ro replace $eui64/128 dev $INTERFACE table $TABLE
-	ip -6 neigh add proxy $eui64 dev $uplink 
+	ip -6 neigh add proxy $eui64 dev $uplink
 
 	# disable proxy NDP since we're handling this on userspace
 	# this should be the default, but better safe than sorry
@@ -119,14 +119,18 @@ function setup_ebtables {
   ebtables -A $TO -p ipv4 --ip-protocol=udp  --ip-destination-port=68 -j ACCEPT
   # allow only packets from the same mac prefix
   ebtables -A $TO -s \! $MAC/$MAC_MASK -j DROP
-  if [ $ENABLE_MASQ -a -n "$GATEWAY" ]; then
-    # allow packets from/to router (for masquerading)
-    ebtables -A $TO -s $PUBLIC_MAC -j ACCEPT
-    ebtables -A INPUT -i $TAP -j $FROM
-    ebtables -A OUTPUT -o $TAP -j $TO
-  fi
 }
 
+function setup_masq {
+  TAP=$INTERFACE
+  FROM=FROM${TAP^^}
+  TO=TO${TAP^^}
+
+  # allow packets from/to router (for masquerading)
+  ebtables -A $TO -s $PUBLIC_MAC -j ACCEPT
+  ebtables -A INPUT -i $TAP -j $FROM
+  ebtables -A OUTPUT -o $TAP -j $TO
+}
 
 function setup_nfdhcpd {
 	umask 022
@@ -135,16 +139,16 @@ function setup_nfdhcpd {
   #needed in bridged mode where the packets seems to arrive from the
   #bridge and not from the tap
 	cat >$FILE <<EOF
-INDEV=$1
+INDEV=$INDEV
 IP=$IP
 MAC=$MAC
 HOSTNAME=$INSTANCE
 TAGS="$TAGS"
-GATEWAY=$GATEWAY
-SUBNET=$SUBNET 
-GATEWAY6=$GATEWAY6 
-SUBNET6=$SUBNET6 
-EUI64=$($MAC2EUI64 $MAC $SUBNET6 2>/dev/null)
+GATEWAY=$NETWORK_GATEWAY
+SUBNET=$NETWORK_SUBNET
+GATEWAY6=$NETWORK_GATEWAY6
+SUBNET6=$NETWORK_SUBNET6
+EUI64=$($MAC2EUI64 $MAC $NETWORK_SUBNET6 2>/dev/null)
 EOF
 
 }
@@ -158,6 +162,7 @@ INFRA=$STATE_DIR/infra
 
 source $INFRA
 
+log-env
 
 clear_routed_setup_ipv4 > /dev/null 2>&1
 clear_routed_setup_ipv6 > /dev/null 2>&1
@@ -166,23 +171,33 @@ clear_ebtables > /dev/null 2>&1
 
 if [ "$MODE" = "routed" ]; then
   TABLE=$LINK
-  # use a constant predefined MAC address for the tap
-  ip link set $INTERFACE addr $TAP_CONSTANT_MAC
-  # bring the tap up
-  ifconfig $INTERFACE 0.0.0.0 up
-
-  # Drop unicast BOOTP/DHCP packets
-  iptables -A FORWARD -i $INTERFACE -p udp --dport 67 -j DROP
-
-  routed_setup_ipv4 > /dev/null 2>&1
-  routed_setup_ipv6 > /dev/null 2>&1
-  routed_setup_firewall > /dev/null 2>&1
-  setup_nfdhcpd $INTERFACE
+  ip link set $INTERFACE addr $TAP_CONSTANT_MAC up
+  INDEV=$INTERFACE
 elif [ "$MODE" = "bridged" ]; then
-  ifconfig $INTERFACE 0.0.0.0 up
+  ip link set $INTERFACE up
   brctl addif $BRIDGE $INTERFACE
-  setup_nfdhcpd $BRIDGE
-  if [ $ENABLE_EBTABLES -a "$TYPE" = "private-filtered" ]; then
-    setup_ebtables > /dev/null 2>&1
-  fi
+  INDEV=$BRIDGE
 fi
+
+
+for tag in $NETWORK_TAGS; do
+  case $tag in
+  ip-less-routed)
+    routed_setup_ipv4 > /dev/null 2>&1
+    routed_setup_ipv6 > /dev/null 2>&1
+    routed_setup_firewall > /dev/null 2>&1
+  ;;
+  nfdhcpd)
+    # Drop unicast BOOTP/DHCP packets
+    iptables -A FORWARD -i $INTERFACE -p udp --dport 67 -j DROP
+    setup_nfdhcpd > /dev/null 2>&1
+  ;;
+  mac-filtered)
+    setup_ebtables > /dev/null 2>&1
+  ;;
+  masq)
+    setup_masq > /dev/null 2>&1
+  ;;
+  esac
+done
+
