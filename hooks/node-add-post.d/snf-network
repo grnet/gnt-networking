@@ -8,7 +8,7 @@ if $ENABLE_AUTO_CONF_HOOKS; then
 
   NODE=$GANETI_NODE_NAME
 
-  HOSTNAME=$(hostname)
+  HOSTNAME=$(hostname).$(hostname -d)
 
   if [ "$HOSTNAME" = "$NODE" ]; then
     snf-network-build-node-infra

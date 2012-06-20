@@ -15,19 +15,15 @@ if $ENABLE_AUTO_CONF_HOOKS; then
   . snf-network-get-network-env
 
 
-  if [ "$MODE" = "routed" -a "$TYPE" = "public-routed" ]; then
-
-    snf-network-ipless-routing-on "$LINK" "$SUBNET" "$GATEWAY" "$SUBNET6" "$GATEWAY6"
-
-  fi
-
-
-  if [ -a $ENABLE_MASQ \
-       -a -n "$GATEWAY" -a "$MODE" = "bridged" \
-       -a "$TYPE" = "masq" -a "$LINK" = "$MASQ_BRIDGE" ]; then
-
-    snf-network-masq-on "$LINK" "$SUBNET" "$GATEWAY"
-
-  fi
-
+  for tag in $NETWORK_TAGS; do
+    case $tag in
+    ip-less-routed)
+      snf-network-ipless-routing-on "$LINK" "$SUBNET" "$GATEWAY" "$SUBNET6" "$GATEWAY6"
+    ;;
+    masq)
+      snf-network-masq-on "$LINK" "$SUBNET" "$GATEWAY"
+    ;;
+    esac
+  done
+   
 fi

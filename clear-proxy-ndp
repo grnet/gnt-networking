@@ -19,11 +19,16 @@ if [ "$GANETI_INSTANCE_PRIMARY" = "$host.$domain" ]; then
   LINK=$GANETI_INSTANCE_NIC0_LINK
   MAC=$GANETI_INSTANCE_NIC0_MAC
   SUBNET6=$GANETI_INSTANCE_NIC0_NETWORK_SUBNET6
-  
-  if [ "$MODE" = "routed" -a "$NETWORK_TYPE" = "public" ] ; then
+  TAGS=$GANETI_INSTANCE_NIC0_NETWORK_TAGS  
+
+  for tag in $TAGS; do
+    case tag in
+    ip-less-routed)
       EUI64=$($MAC2EUI64 $MAC $SUBNET6 2>/dev/null)
       ip -6 neigh del proxy $EUI64 dev $PUBLIC_VLAN >/dev/null 2>&1
-  fi
+    ;;
+    esac
+  done
 fi
 
 echo done
