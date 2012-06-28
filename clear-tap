@@ -48,7 +48,7 @@ function clear_ebtables {
 }
 
 
-if [ $# -ne 2 ]; then
+if [ $# -ne 1 ]; then
   echo "Usage: $0 <tap>"
   exit 1
 fi

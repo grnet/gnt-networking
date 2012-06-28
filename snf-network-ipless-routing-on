@@ -12,7 +12,7 @@ fi
 
 source $STATE_DIR/infra
 
-if [ $# -ne 6 ]; then
+if [ $# -ne 5 ]; then
   echo "Usage: $0 <routing table> <subnet> <gateway> <subnet6> <gateway6>"
   exit 1
 fi
