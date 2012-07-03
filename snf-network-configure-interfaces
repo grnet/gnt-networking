@@ -79,21 +79,6 @@ iface $PRIVATE_BRIDGE inet manual
 EOF
   fi  
 
-  if [ -n "$MASQ_VLAN" -a -n "$MASQ_BRIDGE" ]; then
-    cat<<EOF
-auto $MASQ_VLAN
-iface $MASQ_VLAN inet manual
-
-auto $MASQ_BRIDGE
-iface $MASQ_BRIDGE inet manual
-  bridge_ports $MASQ_VLAN
-  bridge_stp off
-  bridge_fd 2
-  post-up ip link set $MASQ_BRIDGE address $PUBLIC_MAC 
-
-EOF
-  fi
-
   if [ -n "$PRIVATE_VLAN_ID_OFFSET" ]; then
      HELPER="$PRIVATE_VLAN_ID_MIN $PRIVATE_VLAN_ID_MAX $PRIVATE_VLAN_ID_OFFSET"
      cat<<EOF
@@ -109,14 +94,14 @@ fi
 
 ) > $INTERFACES
 
+echo 1 > /proc/sys/net/ipv4/conf/all/forwarding
+echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
+echo 1 > /proc/sys/net/ipv4/ip_forward
+
 if $DONOTIFUP; then
   echo Check interfaces:
   cat $INTERFACES
   exit 1
 fi
-
-echo 1 > /proc/sys/net/ipv4/conf/all/forwarding
-echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
-echo 1 > /proc/sys/net/ipv4/ip_forward
 
 ifup -i $INTERFACES -a

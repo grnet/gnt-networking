@@ -25,11 +25,7 @@ echo
 echo "# node's public interface MAC" 
 echo PUBLIC_MAC=$PUBLIC_MAC
 
-if $GENERIC_SETUP; then
-
-  echo MASQ_BRIDGE=$PUBLIC_BRIDGE
-
-elif $GRNET_SETUP; then
+if $GRNET_SETUP; then
 
   if [ -n "$PUBLIC_VLAN_ID" ]; then
     echo 
@@ -40,12 +36,6 @@ elif $GRNET_SETUP; then
     echo 
     echo PRIVATE_VLAN=$PUBLIC_IFACE.$PRIVATE_VLAN_ID
     echo PRIVATE_BRIDGE=$BRIDGE_PREFIX$PRIVATE_BRIDGE_ID
-  fi
-
-  if [ -n "$MASQ_VLAN_ID" ]; then
-    echo 
-    echo MASQ_VLAN=$PUBLIC_IFACE.$MASQ_VLAN_ID
-    echo MASQ_BRIDGE=$BRIDGE_PREFIX$MASQ_BRIDGE_ID
   fi
 
 fi
