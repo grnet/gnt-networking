@@ -5,7 +5,7 @@ function usage {
 	exit 1
 }
 
-if [ $# -ne 5 -o $# -ne 6]; then
+if [ $# -ne 5 -a $# -ne 6 ]; then
 	usage
 fi
 
@@ -38,6 +38,9 @@ function down {
 	prv_min=$2
 	prv_max=$3
 	offset=$4
+  if [ -n "$5" ]; then prefix=$5
+  else prefix=prv
+  fi
 
 	echo "Removing VLANs $2 - $3"
 	for prv in $(seq $prv_min $prv_max); do
