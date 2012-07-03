@@ -1,11 +1,11 @@
 #!/bin/bash
 
 function usage {
-	echo "Usage: $0 <mode> <parent interface> <prv min> <prv max> <offset> <bridge prefix>"
+	echo "Usage: $0 <mode> <parent interface> <prv min> <prv max> <offset> [<bridge prefix>]"
 	exit 1
 }
 
-if [ $# -ne 6 ]; then
+if [ $# -ne 5 -o $# -ne 6]; then
 	usage
 fi
 
@@ -14,7 +14,9 @@ function up {
 	prv_min=$2
 	prv_max=$3
 	offset=$4
-  prefix=$5
+  if [ -n "$5" ]; then prefix=$5
+  else prefix=prv
+  fi
 
 	echo "Adding VLANs $2 - $3"
 	vconfig set_name_type DEV_PLUS_VID_NO_PAD
