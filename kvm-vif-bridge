@@ -32,9 +32,6 @@ function clear_routed_setup_firewall {
 }
 
 function clear_ebtables {
-  TAP=$INTERFACE
-  FROM=FROM${TAP^^}
-  TO=TO${TAP^^}
 
   ebtables -D INPUT -i $TAP -j $FROM
   ebtables -D FORWARD -i $TAP -j $FROM
@@ -101,20 +98,23 @@ function routed_setup_firewall {
 	fi
 }
 
-function setup_ebtables {
-  TAP=$INTERFACE
-  FROM=FROM${TAP^^}
-  TO=TO${TAP^^}
+function create_ebtables {
 
   ebtables -N $FROM
+  ebtables -A FORWARD -i $TAP -j $FROM
+  ebtables -N $TO
+  ebtables -A FORWARD -o $TAP -j $TO
+
+}
+
+
+function setup_ebtables {
+
   # do not allow changes in ip-mac pair
   if [ -n "$IP"]; then
     ebtables -A $FROM --ip-source \! $IP -p ipv4 -j DROP
   fi
   ebtables -A $FROM -s \! $MAC -j DROP
-  ebtables -A FORWARD -i $TAP -j $FROM
-  ebtables -N $TO
-  ebtables -A FORWARD -o $TAP -j $TO
   #accept dhcp responses from host (nfdhcpd)
   ebtables -A $TO -p ipv4 --ip-protocol=udp  --ip-destination-port=68 -j ACCEPT
   # allow only packets from the same mac prefix
@@ -122,14 +122,13 @@ function setup_ebtables {
 }
 
 function setup_masq {
-  TAP=$INTERFACE
-  FROM=FROM${TAP^^}
-  TO=TO${TAP^^}
 
   # allow packets from/to router (for masquerading)
-  ebtables -A $TO -s $PUBLIC_MAC -j ACCEPT
-  ebtables -A INPUT -i $TAP -j $FROM
-  ebtables -A OUTPUT -o $TAP -j $TO
+  # ebtables -A $TO -s $PUBLIC_MAC -j ACCEPT
+  # ebtables -A INPUT -i $TAP -j $FROM
+  # ebtables -A OUTPUT -o $TAP -j $TO
+  return
+
 }
 
 function setup_nfdhcpd {
@@ -169,14 +168,21 @@ clear_routed_setup_ipv6 > /dev/null 2>&1
 clear_routed_setup_firewall > /dev/null 2>&1
 clear_ebtables > /dev/null 2>&1
 
+TAP=$INTERFACE
+FROM=FROM${TAP^^}
+TO=TO${TAP^^}
+
 if [ "$MODE" = "routed" ]; then
   TABLE=$LINK
   ip link set $INTERFACE addr $TAP_CONSTANT_MAC up
   INDEV=$INTERFACE
+  DROPDHCPREQCMD="iptables -A FORWARD -i $INTERFACE -p udp --dport 67 -j DROP"
 elif [ "$MODE" = "bridged" ]; then
   ip link set $INTERFACE up
   brctl addif $BRIDGE $INTERFACE
   INDEV=$BRIDGE
+  init_ebtables > /dev/null 2>&1
+  DROPDHCPREQCMD="ebtables -A $FROM -p ipv4 --ip-protocol udp --ip-destination-port 67 -j DROP"
 fi
 
 
@@ -189,8 +195,8 @@ for tag in $NETWORK_TAGS; do
   ;;
   nfdhcpd)
     # Drop unicast BOOTP/DHCP packets
-    iptables -A FORWARD -i $INTERFACE -p udp --dport 67 -j DROP
     setup_nfdhcpd > /dev/null 2>&1
+    $DROPDHCPREQCMD
   ;;
   mac-filtered)
     setup_ebtables > /dev/null 2>&1
