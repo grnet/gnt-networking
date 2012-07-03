@@ -33,10 +33,9 @@ function clear_routed_setup_firewall {
 
 function clear_ebtables {
 
-  ebtables -D INPUT -i $TAP -j $FROM
   ebtables -D FORWARD -i $TAP -j $FROM
   ebtables -D FORWARD -o $TAP -j $TO
-  ebtables -D OUTPUT -o $TAP -j $TO
+  #ebtables -D OUTPUT -o $TAP -j $TO
 
   ebtables -X $FROM
   ebtables -X $TO
@@ -163,14 +162,14 @@ source $INFRA
 
 log-env
 
+TAP=$INTERFACE
+FROM=FROM${TAP^^}
+TO=TO${TAP^^}
+
 clear_routed_setup_ipv4 > /dev/null 2>&1
 clear_routed_setup_ipv6 > /dev/null 2>&1
 clear_routed_setup_firewall > /dev/null 2>&1
 clear_ebtables > /dev/null 2>&1
-
-TAP=$INTERFACE
-FROM=FROM${TAP^^}
-TO=TO${TAP^^}
 
 if [ "$MODE" = "routed" ]; then
   TABLE=$LINK
