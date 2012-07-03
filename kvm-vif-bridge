@@ -98,7 +98,7 @@ function routed_setup_firewall {
 	fi
 }
 
-function create_ebtables {
+function init_ebtables {
 
   ebtables -N $FROM
   ebtables -A FORWARD -i $TAP -j $FROM
@@ -195,8 +195,8 @@ for tag in $NETWORK_TAGS; do
   ;;
   nfdhcpd)
     # Drop unicast BOOTP/DHCP packets
+    $DROPDHCPREQCMD > /dev/null 2>&1
     setup_nfdhcpd > /dev/null 2>&1
-    $DROPDHCPREQCMD
   ;;
   mac-filtered)
     setup_ebtables > /dev/null 2>&1
