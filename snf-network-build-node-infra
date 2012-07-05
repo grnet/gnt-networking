@@ -10,7 +10,7 @@ HOSTINFRA=$STATE_DIR/infra
 
 PUBLIC_IFACE=$(ip route | grep default | awk '{print $5}')
 PUBLIC_MAC=$(ip link show $PUBLIC_IFACE | grep link/ether | awk '{print $2}')
-PUBLIC_IP=$(ip a show $PUBLIC_IFACE | grep "inet " | awk '[print $2}') 
+PUBLIC_IP=$(ip a show $PUBLIC_IFACE | grep "inet " | awk '{print $2}') 
 PUBLIC_GW=$(ip route | grep default | awk '{print $3}')
 
 (
@@ -52,8 +52,5 @@ GENERIC)
   echo PUBLIC_LINK=$PUBLIC_BRIDGE
   ;;
 esac
-
-fi
-
 
 )  > $HOSTINFRA
