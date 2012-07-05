@@ -38,6 +38,7 @@ GRNET)
   if [ -n "$PUBLIC_VLAN_ID" ]; then
     echo 
     echo PUBLIC_VLAN=$PUBLIC_IFACE.$PUBLIC_VLAN_ID
+    echo PUBLIC_LINK=snf_public
   fi
 
   if [ -n "$PRIVATE_VLAN_ID" ]; then
@@ -45,6 +46,11 @@ GRNET)
     echo PRIVATE_VLAN=$PUBLIC_IFACE.$PRIVATE_VLAN_ID
     echo PRIVATE_BRIDGE=$BRIDGE_PREFIX$PRIVATE_BRIDGE_ID
   fi
+  ;;
+generic)
+  echo
+  echo PUBLIC_LINK=$PUBLIC_BRIDGE
+  ;;
 esac
 
 fi
