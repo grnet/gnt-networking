@@ -47,7 +47,7 @@ GRNET)
     echo PRIVATE_BRIDGE=$BRIDGE_PREFIX$PRIVATE_BRIDGE_ID
   fi
   ;;
-generic)
+GENERIC)
   echo
   echo PUBLIC_LINK=$PUBLIC_BRIDGE
   ;;
