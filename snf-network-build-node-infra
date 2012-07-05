@@ -10,8 +10,8 @@ HOSTINFRA=$STATE_DIR/infra
 
 PUBLIC_IFACE=$(ip route | grep default | awk '{print $5}')
 PUBLIC_MAC=$(ip link show $PUBLIC_IFACE | grep link/ether | awk '{print $2}')
-
-
+PUBLIC_IP=$(ip a show $PUBLIC_IFACE | grep "inet " | awk '[print $2}') 
+PUBLIC_GW=$(ip route | grep default | awk '{print $3}')
 
 (
 
@@ -24,6 +24,14 @@ echo PUBLIC_IFACE=$PUBLIC_IFACE
 echo 
 echo "# node's public interface MAC" 
 echo PUBLIC_MAC=$PUBLIC_MAC
+
+echo 
+echo "# node's public IP" 
+echo PUBLIC_IP=$PUBLIC_IP
+
+echo 
+echo "# node's public GW" 
+echo PUBLIC_GW=$PUBLIC_GW
 
 case $SETUP in
 GRNET) 

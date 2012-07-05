@@ -51,6 +51,8 @@ iface $PUBLIC_BRIDGE inet manual
   bridge_ports $PUBLIC_IFACE
   bridge_stp off
   bridge_fd 2
+  up ip addr add $PUBLIC_IP dev $PUBLIC_BRIDGE 
+  up ip route add default via $PUBLIC_GW dev $PUBLIC_BRIDGE
   post-up ip link set $PUBLIC_BRIDGE address $PUBLIC_MAC 
 
 EOF
