@@ -25,8 +25,8 @@ echo
 echo "# node's public interface MAC" 
 echo PUBLIC_MAC=$PUBLIC_MAC
 
-if $GRNET_SETUP; then
-
+case $SETUP in
+GRNET) 
   if [ -n "$PUBLIC_VLAN_ID" ]; then
     echo 
     echo PUBLIC_VLAN=$PUBLIC_IFACE.$PUBLIC_VLAN_ID
@@ -37,6 +37,7 @@ if $GRNET_SETUP; then
     echo PRIVATE_VLAN=$PUBLIC_IFACE.$PRIVATE_VLAN_ID
     echo PRIVATE_BRIDGE=$BRIDGE_PREFIX$PRIVATE_BRIDGE_ID
   fi
+esac
 
 fi
 
