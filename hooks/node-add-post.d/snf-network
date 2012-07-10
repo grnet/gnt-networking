@@ -17,3 +17,5 @@ if $ENABLE_AUTO_CONF_HOOKS; then
   fi
 
 fi
+
+exit 0

@@ -14,3 +14,5 @@ if $ENABLE_AUTO_CONF_HOOKS; then
   snf-network-configure-interfaces
 
 fi
+
+exit 0

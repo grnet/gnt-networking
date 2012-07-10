@@ -31,4 +31,4 @@ if [ "$GANETI_INSTANCE_PRIMARY" = "$host.$domain" ]; then
   done
 fi
 
-echo done
+exit 0
