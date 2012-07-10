@@ -51,7 +51,7 @@ iface $PUBLIC_BRIDGE inet manual
   bridge_ports $NODE_IFACE
   bridge_stp off
   bridge_fd 2
-  up for ip in $NODE_IPS; do ip addr add $ip dev $PUBLIC_BRIDGE; done 
+  up for ip in $NODE_IPS; do ip addr add \$ip dev $PUBLIC_BRIDGE; done 
   up ip route add default via $NODE_GW dev $PUBLIC_BRIDGE
   post-up ip link set $PUBLIC_BRIDGE address $NODE_MAC 
 
