@@ -7,12 +7,14 @@ source $CONF
 
 case $SETUP in
 GRNET)
-  DEFINFRA=/etc/snf-network/grnet.conf
+  INFRA=/etc/snf-network/grnet.conf
   ;;
 GENERIC)
-  DEFINFRA=/etc/snf-network/generic.conf
+  INFRA=/etc/snf-network/generic.conf
   ;;
 esac
+
+source $INFRA
 
 HOSTINFRA=$STATE_DIR/infra
 
@@ -23,7 +25,7 @@ NODE_GW=$(ip route | grep default | awk '{print $3}')
 
 (
 
-cat $DEFINFRA
+cat $INFRA
 
 echo
 echo "# node's interface" 
