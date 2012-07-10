@@ -4,46 +4,54 @@ DEFAULT=/etc/default/snf-network
 
 source $DEFAULT
 source $CONF
-source $INFRA
+
+case $SETUP in
+GRNET)
+  DEFINFRA=/etc/snf-network/grnet.conf
+  ;;
+GENERIC)
+  DEFINFRA=/etc/snf-network/generic.conf
+  ;;
+esac
 
 HOSTINFRA=$STATE_DIR/infra
 
-PUBLIC_IFACE=$(ip route | grep default | awk '{print $5}')
-PUBLIC_MAC=$(ip link show $PUBLIC_IFACE | grep link/ether | awk '{print $2}')
-PUBLIC_IP=$(ip a show $PUBLIC_IFACE | grep "inet " | awk '{print $2}') 
-PUBLIC_GW=$(ip route | grep default | awk '{print $3}')
+NODE_IFACE=$(ip route | grep default | awk '{print $5}')
+NODE_MAC=$(ip link show $NODE_IFACE | grep link/ether | awk '{print $2}')
+NODE_IPS="$(ip a show $NODE_IFACE | grep "inet " | awk '{print $2}')"
+NODE_GW=$(ip route | grep default | awk '{print $3}')
 
 (
 
-cat $INFRA
+cat $DEFINFRA
 
 echo
-echo "# node's public interface" 
-echo PUBLIC_IFACE=$PUBLIC_IFACE 
+echo "# node's interface" 
+echo NODE_IFACE=$NODE_IFACE 
 
 echo 
-echo "# node's public interface MAC" 
-echo PUBLIC_MAC=$PUBLIC_MAC
+echo "# node's MAC" 
+echo NODE_MAC=$NODE_MAC
 
 echo 
-echo "# node's public IP" 
-echo PUBLIC_IP=$PUBLIC_IP
+echo "# node's IPs" 
+echo NODE_IPS=\"$NODE_IPS\"
 
 echo 
-echo "# node's public GW" 
-echo PUBLIC_GW=$PUBLIC_GW
+echo "# node's Gateway" 
+echo NODE_GW=$NODE_GW
 
 case $SETUP in
 GRNET) 
   if [ -n "$PUBLIC_VLAN_ID" ]; then
     echo 
-    echo PUBLIC_VLAN=$PUBLIC_IFACE.$PUBLIC_VLAN_ID
-    echo PUBLIC_LINK=snf_public
+    echo PUBLIC_VLAN=$NODE_IFACE.$PUBLIC_VLAN_ID
+    echo PUBLIC_LINK=$ROUTING_TABLE
   fi
 
   if [ -n "$PRIVATE_VLAN_ID" ]; then
     echo 
-    echo PRIVATE_VLAN=$PUBLIC_IFACE.$PRIVATE_VLAN_ID
+    echo PRIVATE_VLAN=$NODE_IFACE.$PRIVATE_VLAN_ID
     echo PRIVATE_BRIDGE=$BRIDGE_PREFIX$PRIVATE_BRIDGE_ID
   fi
   ;;

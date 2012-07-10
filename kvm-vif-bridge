@@ -123,7 +123,7 @@ function setup_ebtables {
 function setup_masq {
 
   # allow packets from/to router (for masquerading)
-  # ebtables -A $TO -s $PUBLIC_MAC -j ACCEPT
+  # ebtables -A $TO -s $NODE_MAC -j ACCEPT
   # ebtables -A INPUT -i $TAP -j $FROM
   # ebtables -A OUTPUT -o $TAP -j $TO
   return
