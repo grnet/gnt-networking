@@ -4,9 +4,6 @@ MAC2EUI64=/usr/bin/mac2eui64
 
 source /etc/default/snf-network
 
-source $CONF
-source $STATE_DIR/infra
-
 host=$(hostname)
 domain=$(hostname -d)
 
@@ -25,7 +22,8 @@ if [ "$GANETI_INSTANCE_PRIMARY" = "$host.$domain" ]; then
     case tag in
     ip-less-routed)
       EUI64=$($MAC2EUI64 $MAC $SUBNET6 2>/dev/null)
-      ip -6 neigh del proxy $EUI64 dev $PUBLIC_VLAN >/dev/null 2>&1
+      uplink=$(ip -6 route list table $LINK | grep "default via" | awk '{print $5}')
+      ip -6 neigh del proxy $EUI64 dev $uplink >/dev/null 2>&1
     ;;
     esac
   done

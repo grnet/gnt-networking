@@ -61,7 +61,7 @@ function routed_setup_ipv4 {
 function routed_setup_ipv6 {
 	# Add a routing entry for the eui-64
 	prefix=$NETWORK_SUBNET6
-	uplink=$PUBLIC_VLAN
+	uplink=$(ip -6 route list table $TABLE | grep "default via" | awk '{print $5}')
 	eui64=$($MAC2EUI64 $MAC $prefix)
 
 
@@ -152,15 +152,7 @@ EOF
 }
 
 
-DEFAULT=/etc/default/snf-network
-source $DEFAULT
-source $CONF
-
-INFRA=$STATE_DIR/infra
-
-source $INFRA
-
-log-env
+source /etc/default/snf-network
 
 TAP=$INTERFACE
 FROM=FROM${TAP^^}

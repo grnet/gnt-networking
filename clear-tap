@@ -6,8 +6,6 @@
 DEFAULT=/etc/default/snf-network
 NFDHCPD_STATE_DIR=/var/lib/nfdhcpd
 source $DEFAULT
-source $CONF
-source $STATE_DIR/infra
 
 function clear_routed_setup_ipv4 {
 
