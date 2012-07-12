@@ -1,0 +1,72 @@
+###############
+# GRNET SETUP #
+###############
+# IP-less routing / proxy arp interfaces examples:
+# This vlan is used for internet connection of the VMs
+# The gateway is a router that connects all nodes VLANs
+# snf_public should be an existing routing table (in /etc/iproute/rt_tables)
+# The values of ip-routes and ip-gateway must be the same
+# decrared in ganeti network related to this routing table.
+# gnt-network add --network=62.217.123.128/27 --gateway=62.217.123.129 
+#                 --network6=2001:648:2ffc:1201::/64 --gateway6=2001:648:2ffc:1201::1
+#                 --network-type=public --tags=nfdhcpd,ip-less-routed snf-net-1
+# gnt-network connect snf-net-1 all routed snf_public
+
+auto eth0.201
+iface eth0.201 inet manual
+  ip-routing-table snf_public
+  ip-routes 62.217.123.128/27
+  ip-gateway 62.217.123.129
+  ip-forwarding 1
+  ip-proxy-arp 1
+  arp-ip 62.217.123.158
+
+iface eth0.201 inet6 manual
+  ip-routing-table snf_public
+  ip-routes 2001:648:2ffc:1201::/64
+  ip-gateway 2001:648:2ffc:1201::1
+  ip-forwarding 1
+  ip-proxy-ndp 1
+
+# A bridge pool to connect tap devices of private networks
+# A private network uses explicitly one vlan
+# prv1            8000.e4115bb2925c       no              eth0.2991
+# prv2            8000.e4115bb2925c       no              eth0.2992
+# prv3            8000.e4115bb2925c       no              eth0.2993
+# prv4            8000.e4115bb2925c       no              eth0.2994
+# prv5            8000.e4115bb2925c       no              eth0.2995
+auto prv
+iface prv inet manual
+    up   prv-net-helper up   eth0 1 5 2990 prv
+    down prv-net-helper down eth0 1 5 2990 prv
+
+# A bridge to connect tap devices of private networks
+# All private networks use this bridge
+# Isolation is provided with ebtables and MAC filtering
+# prv0            8000.e4115bb2925c       no              eth0.2990
+auto prv0
+iface prv0 inet manual
+  bridge_ports eth0.2990
+  bridge_stp off
+  bridge_fd 2
+  post-up ip link set prv0 address e4:11:5b:b2:92:5c 
+
+
+#################
+# GENERIC SETUP #
+#################
+# All taps bridged on this bridged
+# eth0 is the node's primary interface
+# 62.217.123.132/27 is the node's primary address
+# 62.217.123.129 is the node's primary Gateway
+# aa:00:00:32:50:51 is the node's primary MAC address
+auto br0
+iface br0 inet manual
+  bridge_ports eth0
+  bridge_stp off
+  bridge_fd 2
+  up for ip in 62.217.123.132/27; do ip addr add $ip dev br0; done 
+  up ip route add default via 62.217.123.129 dev br0
+  post-up ip link set br0 address aa:00:00:32:50:51 
+
+
