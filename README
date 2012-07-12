@@ -1,60 +1,7 @@
-This source tree aims to provide networking funtionality for synnefo and
-Ganeti.
+This package provides:
+- kvm-vif-bridge for providing network connectivity to VMs
+- mac2eui64 for getting IPv6 address from a mac
+- vmrouter if-up/down scripts that prepare routing tables and ip rules needed for GRNET setup
+- prv-net-helper for creating bridged pools
+- clear-proxy-ndp for removing stale entries
 
-Gather existing software components and introduce additions and modifications
-that take full advantage of the new network design and implementation of
-Ganeti.
-
-In general Ganeti and synnefo will support three main configurations for the
-VMs residing in the cluster:
-
-- VMs with public IPs whose packets are routed though their hosts
-using IP-less routing and proxy ARP. 
-
-- VMs with public IPs whose tap interfaces are bridged on a host interface.
-
-- VMs with private IPs whose tap interfaces are bridged on vlans and the host 
-acts as gateway and does the masqeurading needed for internet connection.
-
-- VMs with private IPs residing in the same ethernet collision domain.  
-
-
-
-
-GRNET's specific routed mode:
-
-
-* Proxy ARP: 
-
-* IP-less routing:
-
-
-Single bridge setup. Private IPs. Masquerade: 
-
-For security and not being able to change ip-mac-tap key: 
-# ebtables -N FROMTAP0 
-# ebtables -A FROMTAP0 --ip-source \! 192.168.100.2 -p ipv4 -j DROP
-# ebtables -A FROMTAP0 -s \! aa:00:00:8c:d3:a4 -j DROP 
-# ebtables -A INPUT -i tap0 -j FROMTAP0 (for masquerading)
-# ebtables -A FORWARD -i tap0 -j FROMTAP0 (for private lans)
-# ebtables -N TOTAP0
-# ebtables -A FORWARD -o tap0 -j TOTAP0
-# ebtables -A OUTPUT -o tap0 -j TOTAP0
-# ebtables -A TOTAP0 -s 6e:10:e1:a0:c3:0f -j ACCEPT (from gateway)
-# ebtables -A TOTAP0 -s \! aa:0:0:8c:d3:a4/ff:ff:ff:ff:0:0 -j DROP 
-
-
-Private LANs: 
-
-- Create separete vlans on primary interface of every host.
-- Define new private network in Ganeti without gateway.
-- Bridge any tap interface belonging in the network.   
-- Trunk all vlans in cluster switch.
-
-
-
-nfdhcpd:
-
-* NFQUEUE
-
-* ferm 
