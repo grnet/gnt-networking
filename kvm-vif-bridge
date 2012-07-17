@@ -179,20 +179,20 @@ fi
 
 for tag in $NETWORK_TAGS; do
   case $tag in
-  ip-less-routed)
+  $IP_LESS_ROUTED_TAG)
     routed_setup_ipv4 > /dev/null 2>&1
     routed_setup_ipv6 > /dev/null 2>&1
     routed_setup_firewall > /dev/null 2>&1
   ;;
-  nfdhcpd)
+  $NFDHCPD_TAG)
     # Drop unicast BOOTP/DHCP packets
     $DROPDHCPREQCMD > /dev/null 2>&1
     setup_nfdhcpd > /dev/null 2>&1
   ;;
-  mac-filtered)
+  $MAC_FILTERED_TAG)
     setup_ebtables > /dev/null 2>&1
   ;;
-  masq)
+  $MASQ_TAG)
     setup_masq > /dev/null 2>&1
   ;;
   esac
