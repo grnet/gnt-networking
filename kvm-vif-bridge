@@ -42,6 +42,12 @@ function clear_ebtables {
 }
 
 
+function clear_nfdhcpd {
+
+  rm $NFDHCPD_STATE_DIR/$INTERFACE
+
+}
+
 
 function routed_setup_ipv4 {
 
@@ -162,6 +168,7 @@ clear_routed_setup_ipv4 > /dev/null 2>&1
 clear_routed_setup_ipv6 > /dev/null 2>&1
 clear_routed_setup_firewall > /dev/null 2>&1
 clear_ebtables > /dev/null 2>&1
+clear_nfdhcpd > /dev/null 2>&1
 
 if [ "$MODE" = "routed" ]; then
   TABLE=$LINK
