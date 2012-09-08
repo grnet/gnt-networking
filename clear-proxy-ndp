@@ -10,19 +10,21 @@ domain=$(hostname -d)
 
 if [ "$GANETI_INSTANCE_PRIMARY" = "$host.$domain" ]; then
 
-  NETWORK=$GANETI_INSTANCE_NIC0_NETWORK
-  NETWORK_TYPE=$GANETI_INSTANCE_NIC0_NETWORK_TYPE
-  MODE=$GANETI_INSTANCE_NIC0_MODE
-  LINK=$GANETI_INSTANCE_NIC0_LINK
-  MAC=$GANETI_INSTANCE_NIC0_MAC
-  SUBNET6=$GANETI_INSTANCE_NIC0_NETWORK_SUBNET6
-  TAGS=$GANETI_INSTANCE_NIC0_NETWORK_TAGS  
+  NETWORK="$GANETI_INSTANCE_NIC0_NETWORK"
+  NETWORK_TYPE="$GANETI_INSTANCE_NIC0_NETWORK_TYPE"
+  MODE="$GANETI_INSTANCE_NIC0_MODE"
+  LINK="$GANETI_INSTANCE_NIC0_LINK"
+  MAC="$GANETI_INSTANCE_NIC0_MAC"
+  SUBNET6="$GANETI_INSTANCE_NIC0_NETWORK_SUBNET6"
+  TAGS="$GANETI_INSTANCE_NIC0_NETWORK_TAGS"
 
   for tag in $TAGS; do
-    case tag in
+    case $tag in
     $IP_LESS_ROUTED_TAG)
       EUI64=$($MAC2EUI64 $MAC $SUBNET6 2>/dev/null)
       uplink=$(ip -6 route list table $LINK | grep "default via" | awk '{print $5}')
+
+      hooks-log clear-proxy-ndp "ip -6 neigh del proxy $EUI64 dev $uplink"
       ip -6 neigh del proxy $EUI64 dev $uplink >/dev/null 2>&1
     ;;
     esac
