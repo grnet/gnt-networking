@@ -1,13 +1,22 @@
 #!/bin/bash
 
-# This is an example of a Ganeti kvm ifup script that configures network
-# interfaces based on the initial deployment of the Okeanos project
+
+dir=$(dirname "$0")
+. "$dir"/vif-common.sh
 
 source /etc/default/snf-network
 source /usr/lib/snf-network/common.sh
 
+domname=$(xm domname $domid)
+
+source $GANETI_NIC_DIR/$domname/$devid
+
+INTERFACE=$dev
+INSTANCE=$domname
+
 FROM=FROM${INTERFACE^^}
 TO=TO${INTERFACE^^}
+
 
 try clear_routed_setup_ipv4
 try clear_routed_setup_ipv6
@@ -17,12 +26,15 @@ try clear_nfdhcpd
 
 if [ "$MODE" = "routed" ]; then
   TABLE=$LINK
-  ip link set $INTERFACE addr $TAP_CONSTANT_MAC up
+  ip link set $INTERFACE up
+  success
   INDEV=$INTERFACE
   DROPDHCPREQCMD="iptables -A FORWARD -i $INTERFACE -p udp --dport 67 -j DROP"
 elif [ "$MODE" = "bridged" ]; then
   ip link set $INTERFACE up
+  BRIDGE=$(xenstore_read_default "$XENBUS_PATH/bridge" "$LINK")
   brctl addif $BRIDGE $INTERFACE
+  success
   INDEV=$BRIDGE
   try init_ebtables
   DROPDHCPREQCMD="ebtables -A $FROM -p ipv4 --ip-protocol udp --ip-destination-port 67 -j DROP"
@@ -49,5 +61,3 @@ for tag in $NETWORK_TAGS; do
   ;;
   esac
 done
-
-exit 0
