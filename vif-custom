@@ -4,11 +4,15 @@
 dir=$(dirname "$0")
 . "$dir"/vif-common.sh
 
-source /etc/default/snf-network
-source /usr/lib/snf-network/common.sh
-
+# taken from older vif-common.sh
+dev=$vif
+dev_=${dev#vif}
+domid=${dev_%.*}
+devid=${dev_#*.}
 domname=$(xm domname $domid)
 
+source /etc/default/snf-network
+source /usr/lib/snf-network/common.sh
 source $GANETI_NIC_DIR/$domname/$devid
 
 INTERFACE=$dev
