@@ -1,0 +1,128 @@
+#!/usr/bin/env python
+#
+# Copyright 2013 GRNET S.A. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or
+# without modification, are permitted provided that the following
+# conditions are met:
+#
+#   1. Redistributions of source code must retain the above
+#      copyright notice, this list of conditions and the following
+#      disclaimer.
+#
+#   2. Redistributions in binary form must reproduce the above
+#      copyright notice, this list of conditions and the following
+#      disclaimer in the documentation and/or other materials
+#      provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY GRNET S.A. ``AS IS'' AND ANY EXPRESS
+# OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL GRNET S.A OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+# USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+# AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# The views and conclusions contained in the software and
+# documentation are those of the authors and should not be
+# interpreted as representing official policies, either expressed
+# or implied, of GRNET S.A.
+#
+
+"""Run a command with locking.
+
+Idea shamelessly stolen from http://timkay.com/solo/solo,
+but nicely implemented in Python. :)
+
+"""
+
+import os
+import sys
+import time
+import errno
+import socket
+
+
+DEFAULT_ID = 10001        # TCP port number to use
+DEFAULT_RETRY_SEC = 0.5   # Number of seconds between retries on lock failure
+
+
+def parse_arguments(args):
+    from argparse import ArgumentParser, RawDescriptionHelpFormatter, REMAINDER
+
+    description = \
+        ("Run a command with proper locking, ensuring only a single instance\n"
+         "runs per specified value of `id'. Use the same `id' value for\n"
+         "commands which must never run simultaneously.\n\n"
+         "Locking works by binding a TCPv4 socket to 127.0.0.1:<id>, so <id>\n"
+         "must be a valid port number. Values < 1024 are only usable by "
+         "root.")
+
+    parser = ArgumentParser(description=description,
+                            formatter_class=RawDescriptionHelpFormatter)
+    parser.add_argument("-i", "--id", action="store", dest="id",
+                        default=DEFAULT_ID, metavar="ID",
+                        help=("Run command with id ID, by binding to "
+                              "127.0.0.1:ID. Default is %d" % DEFAULT_ID))
+    parser.add_argument("-r", "--retry-sec", action="store", dest="retry",
+                        default=DEFAULT_RETRY_SEC, metavar="SECONDS_TO_RETRY",
+                        help=("In case we cannot get the lock ,retry after "
+                              "SECONDS_TO_TRY_SECONDS. Default is %d" %
+                              DEFAULT_RETRY_SEC))
+    parser.add_argument("command", metavar="COMMAND", nargs=REMAINDER)
+    args = parser.parse_args()
+    args = vars(args)
+
+    # Sanity checking
+    try:
+        args['id'] = int(args['id'])
+        args['retry'] = float(args['retry'])
+
+        if not args['command']:
+            raise ValueError("The COMMAND to run is mandatory.")
+    except ValueError as ve:
+        sys.stderr.write("Argument parsing failed: %s\n" % ve)
+        sys.exit(1)
+
+    return args
+
+
+def main():
+    args = parse_arguments(sys.argv)
+    port = args['id']
+    retry = args['retry']
+    cmd = args['command']
+
+    # Lock!
+    s = socket.socket(socket.AF_INET)
+    while True:
+        try:
+            s.bind(("127.0.0.1", port))
+            break
+        except socket.error as se:
+            if se.errno != errno.EADDRINUSE:
+                raise
+            sys.stderr.write(("Could not get the lock on TCPv4 "
+                              "127.0.0.1:%d, retrying in %fs...\n" %
+                              (port, retry)))
+            time.sleep(retry)
+
+    # Now that we have the lock,
+    # replace ourselves with the command in args['command'],
+    # allowing it to inherit our environment.
+    #
+    # The lock is freed by the kernel when this process dies.
+    try:
+        os.execvpe(cmd[0], cmd, os.environ)
+    except OSError as oe:
+        sys.stderr.write("Command execution failed: %s\n" % oe)
+        sys.exit(2)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

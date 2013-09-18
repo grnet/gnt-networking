@@ -6,7 +6,6 @@ function try {
 
 }
 
-
 function clear_routed_setup_ipv4 {
 
  arptables -D OUTPUT -o $INTERFACE --opcode request -j mangle
@@ -33,12 +32,12 @@ function clear_routed_setup_firewall {
 
 function clear_ebtables {
 
-  ebtables -D FORWARD -i $INTERFACE -j $FROM
-  ebtables -D FORWARD -o $INTERFACE -j $TO
-  #ebtables -D OUTPUT -o $INTERFACE -j $TO
+  runlocked $RUNLOCKED_OPTS ebtables -D FORWARD -i $INTERFACE -j $FROM
+  runlocked $RUNLOCKED_OPTS ebtables -D FORWARD -o $INTERFACE -j $TO
+  #runlocked $RUNLOCKED_OPTS ebtables -D OUTPUT -o $INTERFACE -j $TO
 
-  ebtables -X $FROM
-  ebtables -X $TO
+  runlocked $RUNLOCKED_OPTS ebtables -X $FROM
+  runlocked $RUNLOCKED_OPTS ebtables -X $TO
 }
 
 
@@ -105,10 +104,10 @@ function routed_setup_firewall {
 
 function init_ebtables {
 
-  ebtables -N $FROM
-  ebtables -A FORWARD -i $INTERFACE -j $FROM
-  ebtables -N $TO
-  ebtables -A FORWARD -o $INTERFACE -j $TO
+  runlocked $RUNLOCKED_OPTS ebtables -N $FROM
+  runlocked $RUNLOCKED_OPTS ebtables -A FORWARD -i $INTERFACE -j $FROM
+  runlocked $RUNLOCKED_OPTS ebtables -N $TO
+  runlocked $RUNLOCKED_OPTS ebtables -A FORWARD -o $INTERFACE -j $TO
 
 }
 
@@ -117,21 +116,21 @@ function setup_ebtables {
 
   # do not allow changes in ip-mac pair
   if [ -n "$IP"]; then
-    ebtables -A $FROM --ip-source \! $IP -p ipv4 -j DROP
+    runlocked $RUNLOCKED_OPTS ebtables -A $FROM --ip-source \! $IP -p ipv4 -j DROP
   fi
-  ebtables -A $FROM -s \! $MAC -j DROP
+  runlocked $RUNLOCKED_OPTS ebtables -A $FROM -s \! $MAC -j DROP
   #accept dhcp responses from host (nfdhcpd)
-  ebtables -A $TO -p ipv4 --ip-protocol=udp  --ip-destination-port=68 -j ACCEPT
+  runlocked $RUNLOCKED_OPTS ebtables -A $TO -p ipv4 --ip-protocol=udp  --ip-destination-port=68 -j ACCEPT
   # allow only packets from the same mac prefix
-  ebtables -A $TO -s \! $MAC/$MAC_MASK -j DROP
+  runlocked $RUNLOCKED_OPTS ebtables -A $TO -s \! $MAC/$MAC_MASK -j DROP
 }
 
 function setup_masq {
 
   # allow packets from/to router (for masquerading)
-  # ebtables -A $TO -s $NODE_MAC -j ACCEPT
-  # ebtables -A INPUT -i $INTERFACE -j $FROM
-  # ebtables -A OUTPUT -o $INTERFACE -j $TO
+  # runlocked $RUNLOCKED_OPTS ebtables -A $TO -s $NODE_MAC -j ACCEPT
+  # runlocked $RUNLOCKED_OPTS ebtables -A INPUT -i $INTERFACE -j $FROM
+  # runlocked $RUNLOCKED_OPTS ebtables -A OUTPUT -o $INTERFACE -j $TO
   return
 
 }

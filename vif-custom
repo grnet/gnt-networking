@@ -41,7 +41,7 @@ elif [ "$MODE" = "bridged" ]; then
   success
   INDEV=$BRIDGE
   try init_ebtables
-  DROPDHCPREQCMD="ebtables -A $FROM -p ipv4 --ip-protocol udp --ip-destination-port 67 -j DROP"
+  DROPDHCPREQCMD="runlocked $RUNLOCKED_OPTS ebtables -A $FROM -p ipv4 --ip-protocol udp --ip-destination-port 67 -j DROP"
 fi
 
 
