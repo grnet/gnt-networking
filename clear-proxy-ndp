@@ -7,28 +7,48 @@ source /etc/default/snf-network
 host=$(hostname)
 domain=$(hostname -d)
 
-
-if [ "$GANETI_INSTANCE_PRIMARY" = "$host.$domain" ]; then
-
-  NETWORK="$GANETI_INSTANCE_NIC0_NETWORK"
-  NETWORK_TYPE="$GANETI_INSTANCE_NIC0_NETWORK_TYPE"
-  MODE="$GANETI_INSTANCE_NIC0_MODE"
-  LINK="$GANETI_INSTANCE_NIC0_LINK"
-  MAC="$GANETI_INSTANCE_NIC0_MAC"
-  SUBNET6="$GANETI_INSTANCE_NIC0_NETWORK_SUBNET6"
-  TAGS="$GANETI_INSTANCE_NIC0_NETWORK_TAGS"
+FIRST=0
+LAST=$((GANETI_INSTANCE_NIC_COUNT - 1))
+for idx in $(seq $FIRST $LAST); do
+  ip=GANETI_INSTANCE_NIC${idx}_IP
+  mac=GANETI_INSTANCE_NIC${idx}_MAC
+  mode=GANETI_INSTANCE_NIC${idx}_MODE
+  link=GANETI_INSTANCE_NIC${idx}_LINK
+  network=GANETI_INSTANCE_NIC${idx}_NETWORK
+  subnet6=GANETI_INSTANCE_NIC${idx}_NETWORK_SUBNET6
+  tags=GANETI_INSTANCE_NIC${idx}_NETWORK_TAGS
+  eval IP=\$$ip
+  eval MAC=\$$mac
+  eval MODE=\$$mode
+  eval LINK=\$$link
+  eval NETWORK=\$$network
+  eval SUBNET6=\$$subnet6
+  eval TAGS=\$$tags
 
   for tag in $TAGS; do
     case $tag in
     $IP_LESS_ROUTED_TAG)
-      EUI64=$($MAC2EUI64 $MAC $SUBNET6 2>/dev/null)
-      uplink=$(ip -6 route list table $LINK | grep "default via" | awk '{print $5}')
-
-      hooks-log clear-proxy-ndp "ip -6 neigh del proxy $EUI64 dev $uplink"
-      ip -6 neigh del proxy $EUI64 dev $uplink >/dev/null 2>&1
+      uplink=$(ip route list table $LINK | grep "default via" | awk '{print $5}')
+      uplink6=$(ip -6 route list table $LINK | grep "default via" | awk '{print $5}')
+      eui64=$($MAC2EUI64 $MAC $SUBNET6 2>/dev/null)
+      if [ "$GANETI_INSTANCE_PRIMARY" = "$host.$domain" ]; then
+        # This runs on the source node
+        hooks-log clear-proxy-ndp "ip -6 neigh del proxy $eui64 dev $uplink6"
+        ip -6 neigh del proxy $eui64 dev $uplink6 >/dev/null 2>&1
+      else
+        # This runs on the target node
+        # Send GARP from host to upstream router to speed up mac change for the VMs IP
+        hooks-log clear-proxy-ndp "arping  -c3 -I $uplink -U $IP"
+        echo 1 > /proc/sys/net/ipv4/ip_nonlocal_bind
+        arping  -c3 -I $uplink -U $IP
+        echo 0 > /proc/sys/net/ipv4/ip_nonlocal_bind
+        # Send Unsolicited Neighbor Advertisement to speed up nd change for the VMs IP
+        hooks-log clear-proxy-ndp "ndsend $eui64 $uplink6"
+        ndsend $eui64 $uplink6
+      fi
     ;;
     esac
   done
-fi
+done
 
 exit 0
