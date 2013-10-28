@@ -33,17 +33,17 @@ for idx in $(seq $FIRST $LAST); do
       eui64=$($MAC2EUI64 $MAC $SUBNET6 2>/dev/null)
       if [ "$GANETI_INSTANCE_PRIMARY" = "$host.$domain" ]; then
         # This runs on the source node
-        hooks-log clear-proxy-ndp "ip -6 neigh del proxy $eui64 dev $uplink6"
+        hooks-log $0 "ip -6 neigh del proxy $eui64 dev $uplink6"
         ip -6 neigh del proxy $eui64 dev $uplink6 >/dev/null 2>&1
       else
         # This runs on the target node
         # Send GARP from host to upstream router to speed up mac change for the VMs IP
-        hooks-log clear-proxy-ndp "arping  -c3 -I $uplink -U $IP"
+        hooks-log $0 "arping  -c3 -I $uplink -U $IP"
         echo 1 > /proc/sys/net/ipv4/ip_nonlocal_bind
         arping  -c3 -I $uplink -U $IP
         echo 0 > /proc/sys/net/ipv4/ip_nonlocal_bind
         # Send Unsolicited Neighbor Advertisement to speed up nd change for the VMs IP
-        hooks-log clear-proxy-ndp "ndsend $eui64 $uplink6"
+        hooks-log $0 "ndsend $eui64 $uplink6"
         ndsend $eui64 $uplink6
       fi
     ;;
