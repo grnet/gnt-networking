@@ -81,9 +81,15 @@ function routed_setup_ipv6 {
 
 # pick a firewall profile per NIC, based on tags (and apply it)
 function routed_setup_firewall {
-	ifprefix="synnefo:network:$INTERFACE_INDEX:"
+	# for latest ganeti there is no need to check other but uuid
+	ifprefixindex="synnefo:network:$INTERFACE_INDEX:"
+	ifprefixname="synnefo:network:$INTERFACE_NAME:"
+	ifprefixuuid="synnefo:network:$INTERFACE_UUID:"
 	for tag in $TAGS; do
-		case ${tag#$ifprefix} in
+		tag=${tag#$ifprefixindex}
+		tag=${tag#$ifprefixname}
+		tag=${tag#$ifprefixuuid}
+		case $tag in
 		protected)
 			chain=protected
 		;;
