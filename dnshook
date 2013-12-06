@@ -1,0 +1,88 @@
+#!/bin/sh
+
+set -e
+
+# Configuration Fallbacks. All can(must for some of them) be overwritten by /etc/ganeti/dnshook.conf
+TTL=300
+SERVER=""
+FZONE="" # Leave empty if only reverse dns management is needed. Don't forget the trailing dot
+KEYFILE=""
+MAC2EUI64="/usr/bin/mac2eui64"
+
+if [ -e /etc/ganeti/dnshook.conf ]; then
+	. /etc/ganeti/dnshook.conf 
+else
+	exit 0
+fi
+
+update () {
+	local ZONE=$1
+	local action="$2"
+	nsupdate -k $KEYFILE > /dev/null << EOF
+	server $SERVER
+	zone $ZONE
+	$action
+	send
+EOF
+}
+
+addremove () {
+	local action=$1
+	local REVZONE=$2
+	local REV6ZONE=$3
+	local REVLPART=$4
+	local REV6LPART=$5
+
+	update $REVZONE "update $action $REVLPART.$REVZONE. $TTL PTR $GANETI_INSTANCE_NAME.$FZONE"
+	update $REV6ZONE "update $action $REV6LPART$REV6ZONE. $TTL PTR $GANETI_INSTANCE_NAME.$FZONE"
+
+	if [ ! -z "$7" ]; then
+		EUI64=$6
+		FORZONE=$7
+		update $FORZONE "update $action $GANETI_INSTANCE_NAME.$FORZONE $TTL A $GANETI_INSTANCE_NIC0_IP"
+		update $FORZONE "update $action $GANETI_INSTANCE_NAME.$FORZONE $TTL AAAA $EUI64" 
+	fi
+}
+
+# Main starts here
+if [ "x" = "x$GANETI_INSTANCE_NIC0_IP" ]; then
+	exit 1
+else
+	OLDIFS=$IFS
+	IFS=". "
+	set -- $GANETI_INSTANCE_NIC0_IP
+	a=$1 ; b=$2; c=$3; d=$4;
+	IFS=$OLDIFS
+	RZONE="$c.$b.$a.in-addr.arpa"
+	RLPART="$d"
+
+	# NOTE: We are going to assume one simple thing. /64s ...
+	# A mistake but good enough for alpha and autoconfiguration
+	prefix=$(ip -6 route list table $GANETI_INSTANCE_NIC0_LINK | awk '/\/64/ {print $1; exit}')
+	eui64=$($MAC2EUI64 $GANETI_INSTANCE_NIC0_MAC $prefix)
+	R6REC=$(host $eui64 | egrep -o '([[:alnum:]]\.){32}ip6.arpa' )
+	R6ZONE=$(echo $R6REC | awk -F. 'BEGIN{rpart="";} { for (i=32;i>16;i=i-1) rpart=$i "." rpart; } END{print rpart "ip6.arpa";}')
+	R6LPART=$(echo $R6REC | awk -F. 'BEGIN{lpart="";} { for (i=16;i>0;i=i-1) lpart=$i "." lpart; } END{print lpart;}')
+fi
+
+if [ "x" = "x$GANETI_INSTANCE_NAME" ]; then
+	exit 1
+fi
+
+if [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_CREATE" ]; then
+	addremove add $RZONE $R6ZONE $RLPART $R6LPART $eui64 $FZONE
+elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_REMOVE" ]; then
+	addremove delete $RZONE $R6ZONE $RLPART $R6LPART $eui64 $FZONE
+elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_RENAME" ]; then
+	addremove delete $RZONE $R6ZONE $RLPART $R6LPART $eui64 $FZONE
+	# Let's override a variable and add ourselves
+	GANETI_INSTANCE_NAME=$GANETI_INSTANCE_NEW_NAME
+	addremove add $RZONE $R6ZONE $RLPART $R6LPART $eui64 $FZONE
+elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_STARTUP" ]; then
+	addremove add $RZONE $R6ZONE $RLPART $R6LPART $eui64 $FZONE
+elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_SHUTDOWN" ]; then
+	addremove delete $RZONE $R6ZONE $RLPART $R6LPART $eui64 $FZONE
+elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_REBOOT" ]; then
+	addremove delete $RZONE $R6ZONE $RLPART $R6LPART $eui64 $FZONE
+	addremove add $RZONE $R6ZONE $RLPART $R6LPART $eui64 $FZONE
+fi
