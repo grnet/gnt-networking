@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e
-
 # Configuration Fallbacks. All can(must for some of them) be overwritten by /etc/default/snf-network
 TTL=300
 # the bind server IP/FQDN
@@ -16,7 +14,7 @@ MAC2EUI64="/usr/bin/mac2eui64"
 
 source /etc/default/snf-network
 
-if [ -z "$SERVER" -o -z "$FZONE" -o -z "$KEYFILE" ]; then
+if [ -z "$SERVER" -o -z "$FZONE" -o ! -e "$KEYFILE" ]; then
   exit 0
 fi
 
@@ -36,17 +34,18 @@ EOF
 # nsupdate  will attempt determine the correct zone to update based on the rest of the input
 send_command () {
 
-	local command="$1"
-	nsupdate -k $KEYFILE > /dev/null << EOF
-	server $SERVER
-	$command
-	send
+  local command="$1"
+  hooks-log dnshook "$command"
+  nsupdate -k $KEYFILE > /dev/null << EOF
+  server $SERVER
+  $command
+  send
 EOF
 
 }
 
 
-addremove_arecord () {
+update_arecord () {
 
   local action=$1
   local command=
@@ -54,6 +53,14 @@ addremove_arecord () {
     command="update $action $GANETI_INSTANCE_NAME.$FZONE $TTL A $IP"
     send_command "$command"
   fi
+
+}
+
+
+update_aaaarecord () {
+
+  local action=$1
+  local command=
   if [ -n "$EUI64" ]; then
     command="update $action $GANETI_INSTANCE_NAME.$FZONE $TTL AAAA $EUI64"
     send_command "$command"
@@ -61,25 +68,43 @@ addremove_arecord () {
 
 }
 
-addremove_ptrrecord () {
+
+update_ptrrecord () {
 
   local action=$1
   local command=
   if [ -n "$IP" ]; then
-	  command="update $action $RLPART.$RZONE. $TTL PTR $GANETI_INSTANCE_NAME.$FZONE"
+    command="update $action $RLPART.$RZONE. $TTL PTR $GANETI_INSTANCE_NAME.$FZONE"
     send_command "$command"
   fi
+
+}
+
+update_ptr6record () {
+
+  local action=$1
+  local command=
   if [ -n "$EUI64" ]; then
-	  command="update $action $R6LPART.$R6ZONE. $TTL PTR $GANETI_INSTANCE_NAME.$FZONE"
+    command="update $action $R6LPART$R6ZONE. $TTL PTR $GANETI_INSTANCE_NAME.$FZONE"
     send_command "$command"
   fi
+
+}
+
+update_all () {
+
+  local action=$1
+  update_arecord $action
+  update_aaaarecord $action
+  update_ptrrecord $action
+  update_ptr6record $action
 
 }
 
 
 # first argument is an eui64 (IPv6)
 # sets GLOBAL args R6REC, R6ZONE, R6LPART
-# lets assume eui64=eui64=2001:648:2ffc:1::1
+# lets assume eui64=2001:648:2ffc:1::1
 # the following commands produce:
 # R6REC=1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.1.0.0.0.c.f.f.2.8.4.6.0.1.0.0.2.ip6.arpa
 # R6ZONE=1.0.0.0.c.f.f.2.8.4.6.0.1.0.0.2.ip6.arpa
@@ -124,30 +149,22 @@ get_rev4_info () {
 update_dns () {
 
   if [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_CREATE" ]; then
-    update_arecord add
-    update_ptrrecord add
+    update_all add
   elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_REMOVE" ]; then
-    update_arecord delete
-    update_ptrrecord delete
+    update_all delete
   elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_RENAME" ]; then
-    update_arecord delete
-    update_ptrrecord delete
+    update_all delete
     # Let's override a variable and add ourselves
     GANETI_INSTANCE_NAME=$GANETI_INSTANCE_NEW_NAME
-    update_arecord add
-    update_ptrrecord add
+    update_all add
   elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_STARTUP" ]; then
-    update_arecord add
-    update_ptrrecord add
+    update_all add
   elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_SHUTDOWN" ]; then
-    update_arecord delete
-    update_ptrrecord delete
+    update_all delete
   elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_REBOOT" ]; then
-    update_arecord add
-    update_ptrrecord add
+    update_all add
   elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_SET_PARAMS" ]; then
-    update_arecord add
-    update_ptrrecord add
+    update_all add
   fi
 
 }
@@ -178,16 +195,16 @@ reset_dns () {
   if [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_SET_PARAMS" ]; then
     query_dns
     # This should remove the A, AAAA, CNAME entries
-    run_action "update delete $GANETI_INSTANCE_NAME.$FZONE"
+    send_command "update delete $GANETI_INSTANCE_NAME.$FZONE"
     for ip in $HOST_IP_ALL; do
       get_rev4_info $ip
       # This should remove the IPv4 reverse entry
-      run_action "update delete $RLPART.$RZONE"
+      send_command "update delete $RLPART.$RZONE"
     done
     for ip6 in $HOST_IP6_ALL; do
       get_rev6_info $ip6
       # This should remove the IPv6 reverse entry
-      run_action "update delete $R6LPART$R6ZONE."
+      send_command "update delete $R6LPART$R6ZONE."
     done
   fi
 
@@ -214,9 +231,10 @@ get_eui64 () {
 
 # Main starts here
 
+
 # Exit if we do not have instance name.
 # It should be exported to hooks for instance related opcodes.
-if [ -z "$GANETI_INSTNACE_NAME" ]; then
+if [ -z "$GANETI_INSTANCE_NAME" ]; then
   exit 0
 fi
 
@@ -249,6 +267,7 @@ for idx in $(seq $FIRST $LAST); do
       get_rev4_info "$IP"
       get_eui64 "$MAC" "$SUBNET6"
       get_rev6_info "$EUI64"
+      hooks-log dnshook "update dns for $GANETI_INSTANCE_NAME $IP $EUI64"
       update_dns
 
       ;;
