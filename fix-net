@@ -31,11 +31,11 @@ for idx in $(seq $FIRST $LAST); do
       uplink=$(ip route list table $LINK | grep "default via" | awk '{print $5}')
       uplink6=$(ip -6 route list table $LINK | grep "default via" | awk '{print $5}')
       eui64=$($MAC2EUI64 $MAC $SUBNET6 2>/dev/null)
-      if [ "$GANETI_INSTANCE_PRIMARY" = "$host.$domain" ]; then
+      if [ "$GANETI_INSTANCE_OLD_PRIMARY" == "$host.$domain" ]; then
         # This runs on the source node
         hooks-log $0 "ip -6 neigh del proxy $eui64 dev $uplink6"
         ip -6 neigh del proxy $eui64 dev $uplink6 >/dev/null 2>&1
-      else
+      elif [ "$GANETI_INSTANCE_NEW_PRIMARY" == "$host.$domain" ]; then
         # This runs on the target node
         # Send GARP from host to upstream router to speed up mac change for the VMs IP
         hooks-log $0 "arping  -c3 -I $uplink -U $IP"
