@@ -13,6 +13,7 @@ KEYFILE=""
 MAC2EUI64="/usr/bin/mac2eui64"
 
 source /etc/default/snf-network
+source /usr/lib/snf-network/common.sh
 
 if [ -z "$SERVER" -o -z "$FZONE" -o ! -e "$KEYFILE" ]; then
   exit 0
@@ -206,24 +207,6 @@ reset_dns () {
       # This should remove the IPv6 reverse entry
       send_command "update delete $R6LPART$R6ZONE."
     done
-  fi
-
-}
-
-
-# Because we do not have IPv6 value in our environment
-# we caclulate it based on the NIC's MAC and the IPv6 subnet (if any)
-# first argument MAC second IPv6 subnet
-# Changes global value EUI64
-get_eui64 () {
-
-  local mac=$1
-  local prefix=$2
-
-  if [ -z "$prefix" ]; then
-    EUI64=
-  else
-    EUI64=$($MAC2EUI64 $MAC $SUBNET6)
   fi
 
 }

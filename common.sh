@@ -66,26 +66,38 @@ function routed_setup_ipv4 {
 
 	# Enable proxy ARP
 	echo 1 > /proc/sys/net/ipv4/conf/$INTERFACE/proxy_arp
+
+  # Send GARP from host to upstream router
+  get_uplink $TABLE
+  echo 1 > /proc/sys/net/ipv4/ip_nonlocal_bind
+  hooks-log $0 "arping  -c3 -I $UPLINK -U $IP"
+  arping  -c3 -I $UPLINK -U $IP
+  echo 0 > /proc/sys/net/ipv4/ip_nonlocal_bind
+
 }
 
 function routed_setup_ipv6 {
 	# Add a routing entry for the eui-64
-	prefix=$NETWORK_SUBNET6
-	uplink=$(ip -6 route list table $TABLE | grep "default via" | awk '{print $5}')
-	eui64=$($MAC2EUI64 $MAC $prefix)
+  get_uplink $TABLE "-6"
+  get_eui64 $MAC $NETWORK_SUBNET6
 
-  if [ -z "$eui64" -o -z "$TABLE" -o -z "$INTERFACE" -o -z "$uplink" ]
+  if [ -z "$EUI64" -o -z "$TABLE" -o -z "$INTERFACE" -o -z "$UPLINK" ]
   then
     return
   fi
 
 	ip -6 rule add dev $INTERFACE table $TABLE
-	ip -6 ro replace $eui64/128 dev $INTERFACE table $TABLE
-	ip -6 neigh add proxy $eui64 dev $uplink
+	ip -6 ro replace $EUI64/128 dev $INTERFACE table $TABLE
+	ip -6 neigh add proxy $EUI64 dev $UPLINK
 
 	# disable proxy NDP since we're handling this on userspace
 	# this should be the default, but better safe than sorry
 	echo 0 > /proc/sys/net/ipv6/conf/$INTERFACE/proxy_ndp
+
+  # Send Unsolicited Neighbor Advertisement
+  hooks-log $0 "ndsend $EUI64 $UPLINK"
+  ndsend $EUI64 $UPLINK
+
 }
 
 # pick a firewall profile per NIC, based on tags (and apply it)
@@ -171,3 +183,27 @@ EOF
 
 }
 
+function get_uplink {
+
+  local table=$1
+  local version=$2
+  UPLINK=$(ip "$version" route list table "$table" | grep "default via" | awk '{print $5}')
+
+}
+
+# Because we do not have IPv6 value in our environment
+# we caclulate it based on the NIC's MAC and the IPv6 subnet (if any)
+# first argument MAC second IPv6 subnet
+# Changes global value EUI64
+get_eui64 () {
+
+  local mac=$1
+  local prefix=$2
+
+  if [ -z "$prefix" ]; then
+    EUI64=
+  else
+    EUI64=$($MAC2EUI64 $mac $prefix)
+  fi
+
+}
