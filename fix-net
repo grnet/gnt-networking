@@ -1,8 +1,7 @@
 #!/bin/bash
 
-MAC2EUI64=/usr/bin/mac2eui64
-
 source /etc/default/snf-network
+source /usr/lib/snf-network/common.sh
 
 host=$(hostname)
 domain=$(hostname -d)
@@ -28,13 +27,13 @@ for idx in $(seq $FIRST $LAST); do
   for tag in $TAGS; do
     case $tag in
     $IP_LESS_ROUTED_TAG)
-      if [ "$GANETI_INSTANCE_OLD_PRIMARY" == "$host.$domain" ]; then
+      if [ "$GANETI_OLD_PRIMARY" == "$host.$domain" ]; then
         # This runs on the source node
         get_uplink $LINK "-6"
         get_eui64 $MAC $SUBNET6
         hooks-log $0 "ip -6 neigh del proxy $EUI64 dev $UPLINK"
         ip -6 neigh del proxy $EUI64 dev $UPLINK >/dev/null 2>&1
-      elif [ "$GANETI_INSTANCE_NEW_PRIMARY" == "$host.$domain" ]; then
+      elif [ "$GANETI_NEW_PRIMARY" == "$host.$domain" ]; then
         hooks-log $0 "Do nothing in new primary. All done by if-up script"
       fi
     ;;
