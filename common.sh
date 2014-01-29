@@ -215,3 +215,138 @@ get_eui64 () {
   fi
 
 }
+
+
+# DDNS related functions
+
+# ommit zone statement
+# nsupdate  will attempt determine the correct zone to update based on the rest of the input
+send_command () {
+
+  local command="$1"
+  hooks-log dnshook "$command"
+  nsupdate -k $KEYFILE > /dev/null << EOF
+  server $SERVER
+  $command
+  send
+EOF
+
+}
+
+
+update_arecord () {
+
+  local action=$1
+  local command=
+  if [ -n "$IP" ]; then
+    command="update $action $GANETI_INSTANCE_NAME.$FZONE $TTL A $IP"
+    send_command "$command"
+  fi
+
+}
+
+
+update_aaaarecord () {
+
+  local action=$1
+  local command=
+  if [ -n "$EUI64" ]; then
+    command="update $action $GANETI_INSTANCE_NAME.$FZONE $TTL AAAA $EUI64"
+    send_command "$command"
+  fi
+
+}
+
+
+update_ptrrecord () {
+
+  local action=$1
+  local command=
+  if [ -n "$IP" ]; then
+    command="update $action $RLPART.$RZONE. $TTL PTR $GANETI_INSTANCE_NAME.$FZONE"
+    send_command "$command"
+  fi
+
+}
+
+update_ptr6record () {
+
+  local action=$1
+  local command=
+  if [ -n "$EUI64" ]; then
+    command="update $action $R6LPART$R6ZONE. $TTL PTR $GANETI_INSTANCE_NAME.$FZONE"
+    send_command "$command"
+  fi
+
+}
+
+update_all () {
+
+  local action=$1
+  update_arecord $action
+  update_aaaarecord $action
+  update_ptrrecord $action
+  update_ptr6record $action
+
+}
+
+
+# first argument is an eui64 (IPv6)
+# sets GLOBAL args R6REC, R6ZONE, R6LPART
+# lets assume eui64=2001:648:2ffc:1::1
+# the following commands produce:
+# R6REC=1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.1.0.0.0.c.f.f.2.8.4.6.0.1.0.0.2.ip6.arpa
+# R6ZONE=1.0.0.0.c.f.f.2.8.4.6.0.1.0.0.2.ip6.arpa
+# R6LPART=1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.
+get_rev6_info () {
+
+  local eui64=$1
+  if [ -z "$eui64" ]; then
+    R6REC= ; R6ZONE= ; R6LPART= ;
+  else
+    R6REC=$(host $eui64 | egrep -o '([[:alnum:]]\.){32}ip6.arpa' )
+    R6ZONE=$(echo $R6REC | awk -F. 'BEGIN{rpart="";} { for (i=32;i>16;i=i-1) rpart=$i "." rpart; } END{print rpart "ip6.arpa";}')
+    R6LPART=$(echo $R6REC | awk -F. 'BEGIN{lpart="";} { for (i=16;i>0;i=i-1) lpart=$i "." lpart; } END{print lpart;}')
+  fi
+
+}
+
+
+# first argument is an ipv4
+# sets args RZONE, RLPART
+# lets assume IP=203.0.113.1
+# RZONE="113.0.203.in-add.arpa"
+# RLPART="1"
+get_rev4_info () {
+
+  local ip=$1
+  if [ -z "$ip" ]; then
+    RZONE= ; RLPART= ;
+  else
+    OLDIFS=$IFS
+    IFS=". "
+    set -- $ip
+    a=$1 ; b=$2; c=$3; d=$4;
+    IFS=$OLDIFS
+    RZONE="$c.$b.$a.in-addr.arpa"
+    RLPART="$d"
+  fi
+
+}
+
+
+# Query nameserver for entries related to the specific instance
+# An example output is the following:
+# www.google.com has address 173.194.113.114
+# www.google.com has address 173.194.113.115
+# www.google.com has address 173.194.113.116
+# www.google.com has address 173.194.113.112
+# www.google.com has address 173.194.113.113
+# www.google.com has IPv6 address 2a00:1450:4001:80b::1012
+query_dns () {
+
+  HOSTQ="host -s -R 3 -W 3"
+  HOST_IP_ALL=$($HOSTQ $GANETI_INSTANCE_NAME.$FZONE $SERVER | sed -n 's/.*has address //p')
+  HOST_IP6_ALL=$($HOSTQ $GANETI_INSTANCE_NAME.$FZONE $SERVER | sed -n 's/.*has IPv6 address //p')
+
+}
