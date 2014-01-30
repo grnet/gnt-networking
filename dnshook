@@ -122,7 +122,7 @@ for idx in $(seq $FIRST $LAST); do
       get_rev4_info "$IP"
       get_eui64 "$MAC" "$SUBNET6"
       get_rev6_info "$EUI64"
-      hooks-log dnshook "update dns for $GANETI_INSTANCE_NAME $IP $EUI64"
+      $SNF_NETWORK_LOG dnshook "update dns for $GANETI_INSTANCE_NAME $IP $EUI64"
       update_dns
 
       ;;

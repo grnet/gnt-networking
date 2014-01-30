@@ -71,7 +71,7 @@ function routed_setup_ipv4 {
   # Send GARP from host to upstream router
   get_uplink $TABLE
   echo 1 > /proc/sys/net/ipv4/ip_nonlocal_bind
-  hooks-log $0 "arping  -c3 -I $UPLINK -U $IP"
+  $SNF_NETWORK_LOG $0 "arping  -c3 -I $UPLINK -U $IP"
   arping  -c3 -I $UPLINK -U $IP
   echo 0 > /proc/sys/net/ipv4/ip_nonlocal_bind
 
@@ -96,7 +96,7 @@ function routed_setup_ipv6 {
 	echo 0 > /proc/sys/net/ipv6/conf/$INTERFACE/proxy_ndp
 
   # Send Unsolicited Neighbor Advertisement
-  hooks-log $0 "ndsend $EUI64 $UPLINK"
+  $SNF_NETWORK_LOG $0 "ndsend $EUI64 $UPLINK"
   ndsend $EUI64 $UPLINK
 
 }
@@ -224,7 +224,7 @@ get_eui64 () {
 send_command () {
 
   local command="$1"
-  hooks-log dnshook "$command"
+  $SNF_NETWORK_LOG dnshook "$command"
   nsupdate -k $KEYFILE > /dev/null << EOF
   server $SERVER
   $command

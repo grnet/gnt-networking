@@ -31,10 +31,10 @@ for idx in $(seq $FIRST $LAST); do
         # This runs on the source node
         get_uplink $LINK "-6"
         get_eui64 $MAC $SUBNET6
-        hooks-log $0 "ip -6 neigh del proxy $EUI64 dev $UPLINK"
+        $SNF_NETWORK_LOG $0 "ip -6 neigh del proxy $EUI64 dev $UPLINK"
         ip -6 neigh del proxy $EUI64 dev $UPLINK >/dev/null 2>&1
       elif [ "$GANETI_NEW_PRIMARY" == "$host.$domain" ]; then
-        hooks-log $0 "Do nothing in new primary. All done by if-up script"
+        $SNF_NETWORK_LOG $0 "Do nothing in new primary. All done by if-up script"
       fi
     ;;
     esac
