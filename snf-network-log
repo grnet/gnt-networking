@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# dummy script for logging script/hook actions
+
+# Usage: caller msg
+
+source /etc/default/snf-network
+
+caller=$1
+
+shift
+
+hooks_info="$GANETI_HOOKS_PATH $GANETI_HOOKS_PHASE"
+
+msg="$@"
+
+cat >>$LOGFILE <<EOF
+$(date) $caller $hooks_info $msg
+EOF
+
+exit 0
