@@ -236,7 +236,7 @@ get_eui64 () {
 send_command () {
 
   local command="$1"
-  $SNF_NETWORK_LOG dnshook "$command"
+  $SNF_NETWORK_LOG $0 "$command"
   nsupdate -k $KEYFILE > /dev/null << EOF
   server $SERVER
   $command
