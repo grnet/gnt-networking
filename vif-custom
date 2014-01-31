@@ -53,6 +53,7 @@ for tag in $NETWORK_TAGS; do
     try routed_setup_ipv4
     try routed_setup_ipv6
     try routed_setup_firewall
+    try send_garp
   ;;
   $NFDHCPD_TAG)
     # Drop unicast BOOTP/DHCP packets

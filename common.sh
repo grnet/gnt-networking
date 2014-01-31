@@ -2,7 +2,7 @@
 
 function try {
 
-  $1 &>/dev/null || true 
+  $1 &>/dev/null || true
 
 }
 
@@ -20,6 +20,14 @@ function clear_routed_setup_ipv6 {
 
 }
 
+function delete_neighbor_proxy {
+
+  get_uplink $LINK "-6"
+  get_eui64 $MAC $SUBNET6
+  $SNF_NETWORK_LOG $0 "ip -6 neigh del proxy $EUI64 dev $UPLINK"
+  ip -6 neigh del proxy $EUI64 dev $UPLINK
+
+}
 
 function clear_routed_setup_firewall {
 
@@ -67,6 +75,10 @@ function routed_setup_ipv4 {
 
 	# Enable proxy ARP
 	echo 1 > /proc/sys/net/ipv4/conf/$INTERFACE/proxy_arp
+
+}
+
+function send_garp {
 
   # Send GARP from host to upstream router
   get_uplink $TABLE

@@ -29,10 +29,7 @@ for idx in $(seq $FIRST $LAST); do
     $IP_LESS_ROUTED_TAG)
       if [ "$GANETI_OLD_PRIMARY" == "$host.$domain" ]; then
         # This runs on the source node
-        get_uplink $LINK "-6"
-        get_eui64 $MAC $SUBNET6
-        $SNF_NETWORK_LOG $0 "ip -6 neigh del proxy $EUI64 dev $UPLINK"
-        ip -6 neigh del proxy $EUI64 dev $UPLINK >/dev/null 2>&1
+        delete_neighbor_proxy
       elif [ "$GANETI_NEW_PRIMARY" == "$host.$domain" ]; then
         $SNF_NETWORK_LOG $0 "Do nothing in new primary. All done by if-up script"
       fi
