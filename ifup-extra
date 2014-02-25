@@ -1,0 +1,24 @@
+#!/bin/bash
+
+source /etc/default/snf-network
+source /usr/lib/snf-network/common.sh
+
+# Useful environment vars
+# INTERFACE, INSTANCE, IP, NETWORK_TAGS, MODE, TABLE
+
+ifprefixindex="synnefo:network:$INTERFACE_INDEX:"
+ifprefixname="synnefo:network:$INTERFACE_NAME:"
+ifprefixuuid="synnefo:network:$INTERFACE_UUID:"
+for tag in $TAGS; do
+  tag=${tag#$ifprefixindex}
+  tag=${tag#$ifprefixname}
+  tag=${tag#$ifprefixuuid}
+  case $tag in
+    mail)
+    # Here add iptalbes rule..
+  ;;
+  esac
+done
+
+exit 0
+

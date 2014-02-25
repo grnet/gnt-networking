@@ -50,4 +50,8 @@ for tag in $NETWORK_TAGS; do
   esac
 done
 
+if [ -x "$IFUP_EXTRA_SCRIPT" ]; then
+  exec $IFUP_EXTRA_SCRIPT "$@"
+fi
+
 exit 0
