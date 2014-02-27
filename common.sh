@@ -33,8 +33,9 @@ function clear_routed_setup_firewall {
 function clear_ebtables {
 
   runlocked $RUNLOCKED_OPTS ebtables -D FORWARD -i $INTERFACE -j $FROM
+  runlocked $RUNLOCKED_OPTS ebtables -D INPUT -i $INTERFACE -j $FROM
   runlocked $RUNLOCKED_OPTS ebtables -D FORWARD -o $INTERFACE -j $TO
-  #runlocked $RUNLOCKED_OPTS ebtables -D OUTPUT -o $INTERFACE -j $TO
+  runlocked $RUNLOCKED_OPTS ebtables -D OUTPUT -o $INTERFACE -j $TO
 
   runlocked $RUNLOCKED_OPTS ebtables -X $FROM
   runlocked $RUNLOCKED_OPTS ebtables -X $TO
@@ -133,8 +134,13 @@ function init_ebtables {
 
   runlocked $RUNLOCKED_OPTS ebtables -N $FROM
   runlocked $RUNLOCKED_OPTS ebtables -A FORWARD -i $INTERFACE -j $FROM
+  # This is needed for multicast packets
+  runlocked $RUNLOCKED_OPTS ebtables -A INPUT -i $INTERFACE -j $FROM
+
   runlocked $RUNLOCKED_OPTS ebtables -N $TO
   runlocked $RUNLOCKED_OPTS ebtables -A FORWARD -o $INTERFACE -j $TO
+  # This is needed for multicast packets
+  runlocked $RUNLOCKED_OPTS ebtables -A OUTPUT -o $INTERFACE -j $TO
 
 }
 
@@ -147,7 +153,7 @@ function setup_ebtables {
   fi
   runlocked $RUNLOCKED_OPTS ebtables -A $FROM -s \! $MAC -j DROP
   #accept dhcp responses from host (nfdhcpd)
-  runlocked $RUNLOCKED_OPTS ebtables -A $TO -p ipv4 --ip-protocol=udp  --ip-destination-port=68 -j ACCEPT
+  runlocked $RUNLOCKED_OPTS ebtables -A $TO -s $INDEV_MAC -p ipv4 --ip-protocol=udp  --ip-destination-port=68 -j ACCEPT
   # allow only packets from the same mac prefix
   runlocked $RUNLOCKED_OPTS ebtables -A $TO -s \! $MAC/$MAC_MASK -j DROP
 }

@@ -25,6 +25,8 @@ elif [ "$MODE" = "bridged" ]; then
   brctl addif $BRIDGE $INTERFACE
   INDEV=$BRIDGE
   try init_ebtables
+  # nfdhcpd creates responses with src mac the mac of indec
+  INDEV_MAC=$(cat /sys/class/net/$INDEV/address)
   DROPDHCPREQCMD="runlocked $RUNLOCKED_OPTS ebtables -A $FROM -p ipv4 --ip-protocol udp --ip-destination-port 67 -j DROP"
 fi
 
