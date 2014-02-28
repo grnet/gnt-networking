@@ -1,36 +1,64 @@
 #!/bin/bash
 
+# IMPORTANT: Your custom script must configure the network interface FULLY,
+# regardless of whether your custom tag, e.g., some-prefix:allow_this, is set.
+#
+# This is necessary to ensure the interface is in a consistent state when
+# local-prefix:allow_this is not defined. Thus you should undo the changes
+# which a previous invocation of this script may have done.
+#
+# In the future, if Ganeti acquires the ability to run ifdown scripts,
+# this functionality will be moved there, greatly simplifying the ifup scripts
+#
+# some-prefix must NOT be synnefo:network: since this is already used by
+# synnefo for setting up firewalls, etc.
+
 source /etc/default/snf-network
 source /usr/lib/snf-network/common.sh
 
 # Useful environment vars
 # INTERFACE, INSTANCE, IP, NETWORK_TAGS, MODE, TABLE
 
-function reset_extra (){
+# This cleans up the rules that might have been applied by a previous ifup-extra
+function clean_extra (){
 
   iptables -D FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT
   ip6tables -D FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT
 
 }
 
-# Reset rules that might have been applied by a previous ifup-extra
-try reset_extra
+# This looks for the following tag examples:
+#  some-prefix:1:mail
+#  some-prefix:snf-nic-12345:mail
+#  some-prefix:8252fabd-1021-411c-b8f7-ed79ed509bb8:mail
+#  some-prefix:mail
+# and issues some iptables rules
+function setup_extra () {
 
-ifprefixindex="synnefo:network:$INTERFACE_INDEX:"
-ifprefixname="synnefo:network:$INTERFACE_NAME:"
-ifprefixuuid="synnefo:network:$INTERFACE_UUID:"
-for tag in $TAGS; do
-  tag=${tag#$ifprefixindex}
-  tag=${tag#$ifprefixname}
-  tag=${tag#$ifprefixuuid}
-  case $tag in
-    mail)
-    # Here add iptalbes rule..
-    iptables -I FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT
-    ip6tables -I FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT
-  ;;
-  esac
-done
+  ifprefixindex="some-prefix:$INTERFACE_INDEX:"
+  ifprefixname="some-prefix:$INTERFACE_NAME:"
+  ifprefixuuid="some-prefix:$INTERFACE_UUID:"
+  ifprefix="some-prefix:"
+
+  for tag in $TAGS; do
+    tag=${tag#$ifprefixindex}
+    tag=${tag#$ifprefixname}
+    tag=${tag#$ifprefixuuid}
+    tag=${tag#$ifprefix}
+    case $tag in
+      mail)
+      # Here add iptalbes rule..
+      iptables -I FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT
+      ip6tables -I FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT
+    ;;
+    esac
+  done
+
+}
+
+try clean_extra
+
+setup_extra
 
 exit 0
 
