@@ -148,8 +148,8 @@ function init_ebtables {
 function setup_ebtables {
 
   # do not allow changes in ip-mac pair
-  if [ -n "$IP"]; then
-    runlocked $RUNLOCKED_OPTS ebtables -A $FROM --ip-source \! $IP -p ipv4 -j DROP
+  if [ -n "$IP" ]; then
+    :; # runlocked $RUNLOCKED_OPTS ebtables -A $FROM --ip-source \! $IP -p ipv4 -j DROP
   fi
   runlocked $RUNLOCKED_OPTS ebtables -A $FROM -s \! $MAC -j DROP
   # accept dhcp responses from host (nfdhcpd)
