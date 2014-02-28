@@ -152,8 +152,10 @@ function setup_ebtables {
     runlocked $RUNLOCKED_OPTS ebtables -A $FROM --ip-source \! $IP -p ipv4 -j DROP
   fi
   runlocked $RUNLOCKED_OPTS ebtables -A $FROM -s \! $MAC -j DROP
-  #accept dhcp responses from host (nfdhcpd)
-  runlocked $RUNLOCKED_OPTS ebtables -A $TO -s $INDEV_MAC -p ipv4 --ip-protocol=udp  --ip-destination-port=68 -j ACCEPT
+  # accept dhcp responses from host (nfdhcpd)
+  # this is actually not needed because nfdhcpd opens a socket and binds is with
+  # tap interface so dhcp response does not go through bridge
+  # runlocked $RUNLOCKED_OPTS ebtables -A $TO -s $INDEV_MAC -p ipv4 --ip-protocol=udp  --ip-destination-port=68 -j ACCEPT
   # allow only packets from the same mac prefix
   runlocked $RUNLOCKED_OPTS ebtables -A $TO -s \! $MAC/$MAC_MASK -j DROP
 }
