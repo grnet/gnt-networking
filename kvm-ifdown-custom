@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# This is an example of a Ganeti kvm ifup script that configures network
+# interfaces based on the initial deployment of the Okeanos project
+
+source /etc/default/snf-network
+source /usr/lib/snf-network/common.sh
+
+GANETI_INSTANCE_NAME=$INSTANCE
+get_info
+
+if [ "$MODE" = "routed" ]; then
+  TABLE=$LINK
+  INDEV=$INTERFACE
+elif [ "$MODE" = "bridged" ]; then
+  brctl delif $BRIDGE $INTERFACE
+  INDEV=$BRIDGE
+fi
+
+
+for tag in $NETWORK_TAGS; do
+  case $tag in
+  $IP_LESS_ROUTED_TAG)
+    try clear_routed_setup_ipv4
+    try clear_routed_setup_ipv6
+    try clear_routed_setup_firewall
+  ;;
+  $NFDHCPD_TAG)
+    try clear_nfdhcpd
+  ;;
+  $MAC_FILTERED_TAG)
+    try clear_ebtables
+  ;;
+  esac
+done
+
+exit 0
