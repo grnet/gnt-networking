@@ -71,8 +71,8 @@ function routed_setup_ipv4 {
   # Send GARP from host to upstream router
   get_uplink $TABLE
   echo 1 > /proc/sys/net/ipv4/ip_nonlocal_bind
-  $SNF_NETWORK_LOG $0 "arping  -c3 -I $UPLINK -U $IP"
-  arping  -c3 -I $UPLINK -U $IP
+  $SNF_NETWORK_LOG $0 "arpsend -U -i $IP -c1 $UPLINK"
+  arpsend -U -i $IP -c1 $UPLINK
   echo 0 > /proc/sys/net/ipv4/ip_nonlocal_bind
 
 }
