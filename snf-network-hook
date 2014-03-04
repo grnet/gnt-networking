@@ -20,15 +20,18 @@ for idx in $(seq $FIRST $LAST); do
   eval MAC=\$$mac
   eval MODE=\$$mode
   eval LINK=\$$link
-  eval NETWORK=\$$network
-  eval SUBNET6=\$$subnet6
-  eval TAGS=\$$tags
+  eval NETWORK_SUBNET=\$$network
+  eval NETWORK_SUBNET6=\$$subnet6
+  eval NETWORK_TAGS=\$$tags
 
-  for tag in $TAGS; do
+  for tag in $NETWORK_TAGS; do
     case $tag in
     $IP_LESS_ROUTED_TAG)
       if [ "$GANETI_OLD_PRIMARY" == "$host.$domain" ]; then
         # This runs on the source node
+        # We invoke get_info here in order not to log and calculate things
+        # that are not needed eventually
+        get_info
         delete_neighbor_proxy
       elif [ "$GANETI_NEW_PRIMARY" == "$host.$domain" ]; then
         $SNF_NETWORK_LOG $0 "Do nothing in new primary. All done by if-up script"

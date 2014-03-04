@@ -24,15 +24,12 @@ function clear_routed_setup_ipv6 {
 
 function delete_neighbor_proxy {
 
-  get_uplink $LINK "-6"
-  get_eui64 $MAC $NETWORK_SUBNET6
-
-  if [ -z "$EUI64" -z -o "$UPLINK" ]; then
+  if [ -z "$EUI64" -z -o "$UPLINK6" ]; then
     return
   fi
 
-  $SNF_NETWORK_LOG $0 "ip -6 neigh del proxy $EUI64 dev $UPLINK"
-  ip -6 neigh del proxy $EUI64 dev $UPLINK
+  $SNF_NETWORK_LOG $0 "ip -6 neigh del proxy $EUI64 dev $UPLINK6"
+  ip -6 neigh del proxy $EUI64 dev $UPLINK6
 
 }
 
@@ -87,7 +84,6 @@ function routed_setup_ipv4 {
 
 function send_garp {
 
-  get_uplink $TABLE
   if [ -z "$IP" -o -z "$UPLINK" ]; then
     return
   fi
@@ -101,26 +97,23 @@ function send_garp {
 }
 
 function routed_setup_ipv6 {
-	# Add a routing entry for the eui-64
-  get_uplink $TABLE "-6"
-  get_eui64 $MAC $NETWORK_SUBNET6
 
-  if [ -z "$EUI64" -o -z "$TABLE" -o -z "$INTERFACE" -o -z "$UPLINK" ]
+  if [ -z "$EUI64" -o -z "$TABLE" -o -z "$INTERFACE" -o -z "$UPLINK6" ]
   then
     return
   fi
-
+	# Add a routing entry for the eui-64
 	ip -6 rule add dev $INTERFACE table $TABLE
 	ip -6 ro replace $EUI64/128 dev $INTERFACE table $TABLE
-	ip -6 neigh add proxy $EUI64 dev $UPLINK
+	ip -6 neigh add proxy $EUI64 dev $UPLINK6
 
 	# disable proxy NDP since we're handling this on userspace
 	# this should be the default, but better safe than sorry
 	echo 0 > /proc/sys/net/ipv6/conf/$INTERFACE/proxy_ndp
 
   # Send Unsolicited Neighbor Advertisement
-  $SNF_NETWORK_LOG $0 "ndsend $EUI64 $UPLINK"
-  ndsend $EUI64 $UPLINK
+  $SNF_NETWORK_LOG $0 "ndsend $EUI64 $UPLINK6"
+  ndsend $EUI64 $UPLINK6
 
 }
 
@@ -209,7 +202,7 @@ GATEWAY=$NETWORK_GATEWAY
 SUBNET=$NETWORK_SUBNET
 GATEWAY6=$NETWORK_GATEWAY6
 SUBNET6=$NETWORK_SUBNET6
-EUI64=$($MAC2EUI64 $MAC $NETWORK_SUBNET6 2>/dev/null)
+EUI64=$EUI64
 EOF
 
 }
@@ -217,9 +210,9 @@ EOF
 function get_uplink {
 
   local table=$1
-  local version=$2
-  UPLINK=$(ip $version route list table $table | grep "default via" | awk '{print $5}')
-  $SNF_NETWORK_LOG $0 "* uplink for table $table is $UPLINK"
+  UPLINK=$(ip route list table $table | grep "default via" | awk '{print $5}')
+  UPLINK6=$(ip -6 route list table $table | grep "default via" | awk '{print $5}')
+  $SNF_NETWORK_LOG $0 "* Table $table: uplink -> $UPLINK, uplink6 -> $UPLINK6"
 
 }
 
@@ -236,7 +229,7 @@ get_eui64 () {
     EUI64=
   else
     EUI64=$($MAC2EUI64 $mac $prefix)
-    $SNF_NETWORK_LOG $0 "* eui64 for $mac inside $prefix is $EUI64"
+    $SNF_NETWORK_LOG $0 "* $mac + $prefix -> $EUI64"
   fi
 
 }
@@ -308,6 +301,7 @@ update_ptr6record () {
 update_all () {
 
   local action=$1
+  $SNF_NETWORK_LOG $0 "Update ($action) dns for $GANETI_INSTANCE_NAME $IP $EUI64"
   update_arecord $action
   update_aaaarecord $action
   update_ptrrecord $action
@@ -356,6 +350,20 @@ get_rev4_info () {
     RZONE="$c.$b.$a.in-addr.arpa"
     RLPART="$d"
   fi
+
+}
+
+
+# Use environment variables to calculate desired info
+# IP, MAC, LINK, TABLE, BRIDGE,
+# NETWORK_SUBNET, NETWORK_GATEWAY, NETWORK_SUBNET6, NETWORK_GATEWAY6
+function get_info {
+
+  $SNF_NETWORK_LOG $0 "Getting info for $INTERFACE of $GANETI_INSTANCE_NAME"
+  get_rev4_info $IP
+  get_eui64 $MAC $NETWORK_SUBNET6
+  get_rev6_info $EUI64
+  get_uplink $TABLE
 
 }
 

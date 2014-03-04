@@ -46,6 +46,7 @@ elif [ "$MODE" = "bridged" ]; then
   DROPDHCPREQCMD="runlocked $RUNLOCKED_OPTS ebtables -A $FROM -p ipv4 --ip-protocol udp --ip-destination-port 67 -j DROP"
 fi
 
+get_info
 
 for tag in $NETWORK_TAGS; do
   case $tag in
