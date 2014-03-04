@@ -213,7 +213,9 @@ function get_uplink {
   local table=$1
   UPLINK=$(ip route list table $table | grep "default via" | awk '{print $5}')
   UPLINK6=$(ip -6 route list table $table | grep "default via" | awk '{print $5}')
-  $SNF_NETWORK_LOG $0 "* Table $table: uplink -> $UPLINK, uplink6 -> $UPLINK6"
+  if [ -n "$UPLINK" -o -n "$UPLINK6" ]; then
+    $SNF_NETWORK_LOG $0 "* Table $table: uplink -> $UPLINK, uplink6 -> $UPLINK6"
+  fi
 
 }
 
