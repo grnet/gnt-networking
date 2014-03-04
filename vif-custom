@@ -18,9 +18,8 @@ source $GANETI_NIC_DIR/$domname/$devid
 INTERFACE=$dev
 INSTANCE=$domname
 
-FROM=FROM${INTERFACE^^}
-TO=TO${INTERFACE^^}
-
+GANETI_INSTANCE_NAME=$INSTANCE
+get_info
 
 try clear_routed_setup_ipv4
 try clear_routed_setup_ipv6
@@ -45,8 +44,6 @@ elif [ "$MODE" = "bridged" ]; then
   INDEV_MAC=$(cat /sys/class/net/$INDEV/address)
   DROPDHCPREQCMD="runlocked $RUNLOCKED_OPTS ebtables -A $FROM -p ipv4 --ip-protocol udp --ip-destination-port 67 -j DROP"
 fi
-
-get_info
 
 for tag in $NETWORK_TAGS; do
   case $tag in

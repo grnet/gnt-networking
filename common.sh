@@ -353,6 +353,14 @@ get_rev4_info () {
 
 }
 
+get_ebtables_chains () {
+
+  local iface=$1
+  FROM=FROM${iface^^}
+  TO=TO${iface^^}
+
+}
+
 
 # Use environment variables to calculate desired info
 # IP, MAC, LINK, TABLE, BRIDGE,
@@ -360,6 +368,7 @@ get_rev4_info () {
 function get_info {
 
   $SNF_NETWORK_LOG $0 "Getting info for $INTERFACE of $GANETI_INSTANCE_NAME"
+  get_ebtables_chains $INTERFACE
   get_rev4_info $IP
   get_eui64 $MAC $NETWORK_SUBNET6
   get_rev6_info $EUI64
