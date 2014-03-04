@@ -6,7 +6,6 @@
 source /etc/default/snf-network
 source /usr/lib/snf-network/common.sh
 
-GANETI_INSTANCE_NAME=$INSTANCE
 get_info
 
 try clear_routed_setup_ipv4
@@ -16,13 +15,10 @@ try clear_ebtables
 try clear_nfdhcpd
 
 if [ "$MODE" = "routed" ]; then
-  TABLE=$LINK
   ip link set $INTERFACE addr $TAP_CONSTANT_MAC up
-  INDEV=$INTERFACE
 elif [ "$MODE" = "bridged" ]; then
   ip link set $INTERFACE up
   brctl addif $BRIDGE $INTERFACE
-  INDEV=$BRIDGE
 fi
 
 for tag in $NETWORK_TAGS; do

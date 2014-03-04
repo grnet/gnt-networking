@@ -18,7 +18,6 @@ source $GANETI_NIC_DIR/$domname/$devid
 INTERFACE=$dev
 INSTANCE=$domname
 
-GANETI_INSTANCE_NAME=$INSTANCE
 get_info
 
 try clear_routed_setup_ipv4
@@ -28,16 +27,13 @@ try clear_ebtables
 try clear_nfdhcpd
 
 if [ "$MODE" = "routed" ]; then
-  TABLE=$LINK
   ip link set $INTERFACE up
   success
-  INDEV=$INTERFACE
 elif [ "$MODE" = "bridged" ]; then
   ip link set $INTERFACE up
   BRIDGE=$(xenstore_read_default "$XENBUS_PATH/bridge" "$LINK")
   brctl addif $BRIDGE $INTERFACE
   success
-  INDEV=$BRIDGE
 fi
 
 for tag in $NETWORK_TAGS; do

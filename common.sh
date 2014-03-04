@@ -362,6 +362,32 @@ get_ebtables_chains () {
 
 }
 
+get_instance_info () {
+
+  if [ -z "$GANETI_INSTANCE_NAME" -a -n "$INSTANCE" ]; then
+    GANETI_INSTANCE_NAME=$INSTANCE
+  fi
+
+}
+
+get_mode_info () {
+
+  local iface=$1
+  local mode=$2
+  local link=$3
+
+  TABLE=
+  INDEV=
+
+  if [ "$mode" = "routed" ]; then
+    TABLE=$link
+    INDEV=$iface
+  elif [ "$mode" = "bridged" ]; then
+    INDEV=$link
+  fi
+
+}
+
 
 # Use environment variables to calculate desired info
 # IP, MAC, LINK, TABLE, BRIDGE,
@@ -369,6 +395,8 @@ get_ebtables_chains () {
 function get_info {
 
   $SNF_NETWORK_LOG $0 "Getting info for $INTERFACE of $GANETI_INSTANCE_NAME"
+  get_instance_info
+  get_mode_info $INTERFACE $MODE $LINK
   get_ebtables_chains $INTERFACE
   get_rev4_info $IP
   get_eui64 $MAC $NETWORK_SUBNET6

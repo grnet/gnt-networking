@@ -6,15 +6,12 @@
 source /etc/default/snf-network
 source /usr/lib/snf-network/common.sh
 
-GANETI_INSTANCE_NAME=$INSTANCE
 get_info
 
 if [ "$MODE" = "routed" ]; then
-  TABLE=$LINK
-  INDEV=$INTERFACE
+  :;
 elif [ "$MODE" = "bridged" ]; then
   brctl delif $BRIDGE $INTERFACE
-  INDEV=$BRIDGE
 fi
 
 
