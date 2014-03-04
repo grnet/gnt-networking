@@ -48,6 +48,7 @@ function setup_extra () {
     case $tag in
       mail)
       # Here add iptalbes rule..
+      $SNF_NETWORK_LOG $0 "Tag $tag found: Applying rule for $INTERFACE..."
       iptables -I FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT
       ip6tables -I FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT
     ;;

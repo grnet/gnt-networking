@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source /etc/default/snf-network
+
 function try {
 
   $1 &>/dev/null || true
@@ -23,7 +25,12 @@ function clear_routed_setup_ipv6 {
 function delete_neighbor_proxy {
 
   get_uplink $LINK "-6"
-  get_eui64 $MAC $SUBNET6
+  get_eui64 $MAC $NETWORK_SUBNET6
+
+  if [ -z "$EUI64" -z -o "$UPLINK" ]; then
+    return
+  fi
+
   $SNF_NETWORK_LOG $0 "ip -6 neigh del proxy $EUI64 dev $UPLINK"
   ip -6 neigh del proxy $EUI64 dev $UPLINK
 
@@ -80,8 +87,12 @@ function routed_setup_ipv4 {
 
 function send_garp {
 
-  # Send GARP from host to upstream router
   get_uplink $TABLE
+  if [ -z "$IP" -o -z "$UPLINK" ]; then
+    return
+  fi
+
+  # Send GARP from host to upstream router
   echo 1 > /proc/sys/net/ipv4/ip_nonlocal_bind
   $SNF_NETWORK_LOG $0 "arpsend -U -i $IP -c1 $UPLINK"
   arpsend -U -i $IP -c1 $UPLINK
@@ -207,7 +218,8 @@ function get_uplink {
 
   local table=$1
   local version=$2
-  UPLINK=$(ip "$version" route list table "$table" | grep "default via" | awk '{print $5}')
+  UPLINK=$(ip $version route list table $table | grep "default via" | awk '{print $5}')
+  $SNF_NETWORK_LOG $0 "* uplink for table $table is $UPLINK"
 
 }
 
@@ -224,6 +236,7 @@ get_eui64 () {
     EUI64=
   else
     EUI64=$($MAC2EUI64 $mac $prefix)
+    $SNF_NETWORK_LOG $0 "* eui64 for $mac inside $prefix is $EUI64"
   fi
 
 }
@@ -236,7 +249,7 @@ get_eui64 () {
 send_command () {
 
   local command="$1"
-  $SNF_NETWORK_LOG $0 "$command"
+  $SNF_NETWORK_LOG $0 "* $command"
   nsupdate -k $KEYFILE > /dev/null << EOF
   server $SERVER
   $command

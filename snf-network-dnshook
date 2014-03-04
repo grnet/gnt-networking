@@ -111,8 +111,8 @@ for idx in $(seq $FIRST $LAST); do
   eval MAC=\$$mac
   eval MODE=\$$mode
   eval LINK=\$$link
-  eval SUBNET=\$$subnet
-  eval SUBNET6=\$$subnet6
+  eval NETWORK_SUBNET=\$$subnet
+  eval NETWORK_SUBNET6=\$$subnet6
   eval TAGS=\$$tags
 
   for tag in $TAGS; do
@@ -120,7 +120,7 @@ for idx in $(seq $FIRST $LAST); do
     $DNS_TAG)
 
       get_rev4_info "$IP"
-      get_eui64 "$MAC" "$SUBNET6"
+      get_eui64 "$MAC" "$NETWORK_SUBNET6"
       get_rev6_info "$EUI64"
       $SNF_NETWORK_LOG dnshook "update dns for $GANETI_INSTANCE_NAME $IP $EUI64"
       update_dns
