@@ -39,6 +39,8 @@ source /usr/lib/snf-network/common.sh
 host=$(hostname)
 domain=$(hostname -d)
 
+INSTANCE=$GANETI_INSTANCE_NAME
+
 FIRST=0
 LAST=$((GANETI_INSTANCE_NIC_COUNT - 1))
 for idx in $(seq $FIRST $LAST); do
@@ -62,8 +64,8 @@ for idx in $(seq $FIRST $LAST); do
     $IP_LESS_ROUTED_TAG)
       if [ "$GANETI_OLD_PRIMARY" == "$host.$domain" ]; then
         # This runs on the source node
-        # We invoke get_info here in order not to log and calculate things
-        # that are not needed eventually
+        # We invoke get_info here in order not to log
+        # and calculate things that are not needed eventually
         get_info
         delete_neighbor_proxy
       elif [ "$GANETI_NEW_PRIMARY" == "$host.$domain" ]; then

@@ -50,6 +50,7 @@ source $GANETI_NIC_DIR/$domname/$devid
 INTERFACE=$dev
 INSTANCE=$domname
 
+$SNF_NETWORK_LOG $0 "Configure $INTERFACE of $INSTANCE"
 get_info
 
 try clear_routed_setup_ipv4

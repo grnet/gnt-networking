@@ -39,6 +39,7 @@
 source /etc/default/snf-network
 source /usr/lib/snf-network/common.sh
 
+$SNF_NETWORK_LOG $0 "Configure $INTERFACE of $INSTANCE"
 get_info
 
 try clear_routed_setup_ipv4

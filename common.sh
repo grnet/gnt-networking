@@ -293,7 +293,7 @@ update_arecord () {
   local action=$1
   local command=
   if [ -n "$IP" ]; then
-    command="update $action $GANETI_INSTANCE_NAME.$FZONE $TTL A $IP"
+    command="update $action $INSTANCE.$FZONE $TTL A $IP"
     send_command "$command"
   fi
 
@@ -305,7 +305,7 @@ update_aaaarecord () {
   local action=$1
   local command=
   if [ -n "$EUI64" ]; then
-    command="update $action $GANETI_INSTANCE_NAME.$FZONE $TTL AAAA $EUI64"
+    command="update $action $INSTANCE.$FZONE $TTL AAAA $EUI64"
     send_command "$command"
   fi
 
@@ -317,7 +317,7 @@ update_ptrrecord () {
   local action=$1
   local command=
   if [ -n "$IP" ]; then
-    command="update $action $RLPART.$RZONE. $TTL PTR $GANETI_INSTANCE_NAME.$FZONE"
+    command="update $action $RLPART.$RZONE. $TTL PTR $INSTANCE.$FZONE"
     send_command "$command"
   fi
 
@@ -328,7 +328,7 @@ update_ptr6record () {
   local action=$1
   local command=
   if [ -n "$EUI64" ]; then
-    command="update $action $R6LPART$R6ZONE. $TTL PTR $GANETI_INSTANCE_NAME.$FZONE"
+    command="update $action $R6LPART$R6ZONE. $TTL PTR $INSTANCE.$FZONE"
     send_command "$command"
   fi
 
@@ -337,7 +337,7 @@ update_ptr6record () {
 update_all () {
 
   local action=$1
-  $SNF_NETWORK_LOG $0 "Update ($action) dns for $GANETI_INSTANCE_NAME $IP $EUI64"
+  $SNF_NETWORK_LOG $0 "Update ($action) dns for $INSTANCE $IP $EUI64"
   update_arecord $action
   update_aaaarecord $action
   update_ptrrecord $action
@@ -362,7 +362,7 @@ get_rev6_info () {
     R6REC=$(host $eui64 | egrep -o '([[:alnum:]]\.){32}ip6.arpa' )
     R6ZONE=$(echo $R6REC | awk -F. 'BEGIN{rpart="";} { for (i=32;i>16;i=i-1) rpart=$i "." rpart; } END{print rpart "ip6.arpa";}')
     R6LPART=$(echo $R6REC | awk -F. 'BEGIN{lpart="";} { for (i=16;i>0;i=i-1) lpart=$i "." lpart; } END{print lpart;}')
-    $SNF_NETWORK_LOG $0 "* rev6($eui64) -> $RLPART, $R6ZONE"
+    $SNF_NETWORK_LOG $0 "* rev6($eui64) -> $R6LPART, $R6ZONE"
   fi
 
 }
@@ -400,43 +400,32 @@ get_ebtables_chains () {
 
 }
 
-get_instance_info () {
-
-  if [ -z "$GANETI_INSTANCE_NAME" -a -n "$INSTANCE" ]; then
-    GANETI_INSTANCE_NAME=$INSTANCE
-  fi
-  $SNF_NETWORK_LOG $0 "* instance -> $GANETI_INSTANCE_NAME"
-
-}
-
 get_mode_info () {
 
-  local iface=$1
-  local mode=$2
-  local link=$3
-
-  TABLE=
-  INDEV=
+  local mode=$1
+  local link=$2
+  local iface=$3
 
   if [ "$mode" = "routed" ]; then
+    BRIDGE=
     TABLE=$link
     INDEV=$iface
   elif [ "$mode" = "bridged" ]; then
+    BRIDGE=$link
+    TABLE=
     INDEV=$link
   fi
-  $SNF_NETWORK_LOG $0 "* $iface + $mode -> $TABLE, $INDEV"
+  $SNF_NETWORK_LOG $0 "* $mode @ $link ($INDEV)"
 
 }
-
 
 # Use environment variables to calculate desired info
 # IP, MAC, LINK, TABLE, BRIDGE,
 # NETWORK_SUBNET, NETWORK_GATEWAY, NETWORK_SUBNET6, NETWORK_GATEWAY6
-function get_info {
+# Note that INTERFACE is available only during ifup scripts
+function get_info () {
 
-  $SNF_NETWORK_LOG $0 "Getting info for $INTERFACE"
-  get_instance_info
-  get_mode_info $INTERFACE $MODE $LINK
+  get_mode_info $MODE $LINK $INTERFACE
   get_ebtables_chains $INTERFACE
   get_rev4_info $IP
   get_eui64 $MAC $NETWORK_SUBNET6
@@ -444,7 +433,6 @@ function get_info {
   get_uplink $TABLE
 
 }
-
 
 # Query nameserver for entries related to the specific instance
 # An example output is the following:
@@ -457,9 +445,9 @@ function get_info {
 query_dns () {
 
   HOSTQ="host -s -R 3 -W 3"
-  HOST_IP_ALL=$($HOSTQ $GANETI_INSTANCE_NAME.$FZONE $SERVER | sed -n 's/.*has address //p')
-  HOST_IP6_ALL=$($HOSTQ $GANETI_INSTANCE_NAME.$FZONE $SERVER | sed -n 's/.*has IPv6 address //p')
-  $SNF_NETWORK_LOG $0 "* ip($GANETI_INSTANCE_NAME) -> $HOST_IP_ALL"
-  $SNF_NETWORK_LOG $0 "* ip6($GANETI_INSTANCE_NAME) -> $HOST_IP6_ALL"
+  HOST_IP_ALL=$($HOSTQ $INSTANCE.$FZONE $SERVER | sed -n 's/.*has address //p')
+  HOST_IP6_ALL=$($HOSTQ $INSTANCE.$FZONE $SERVER | sed -n 's/.*has IPv6 address //p')
+  $SNF_NETWORK_LOG $0 "* ip($INSTANCE) -> $HOST_IP_ALL"
+  $SNF_NETWORK_LOG $0 "* ip6($INSTANCE) -> $HOST_IP6_ALL"
 
 }

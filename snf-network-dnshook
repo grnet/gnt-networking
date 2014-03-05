@@ -61,7 +61,7 @@ update_dns () {
   elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_RENAME" ]; then
     update_all delete
     # Let's override a variable and add ourselves
-    GANETI_INSTANCE_NAME=$GANETI_INSTANCE_NEW_NAME
+    INSTANCE=$GANETI_INSTANCE_NEW_NAME
     update_all add
   elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_STARTUP" ]; then
     update_all add
@@ -75,24 +75,6 @@ update_dns () {
 
 }
 
-
-# Query nameserver for entries related to the specific instance
-# An example output is the following:
-# www.google.com has address 173.194.113.114
-# www.google.com has address 173.194.113.115
-# www.google.com has address 173.194.113.116
-# www.google.com has address 173.194.113.112
-# www.google.com has address 173.194.113.113
-# www.google.com has IPv6 address 2a00:1450:4001:80b::1012
-query_dns () {
-
-  HOSTQ="host -s -R 3 -W 3"
-  HOST_IP_ALL=$($HOSTQ $GANETI_INSTANCE_NAME.$FZONE $SERVER | sed -n 's/.*has address //p')
-  HOST_IP6_ALL=$($HOSTQ $GANETI_INSTANCE_NAME.$FZONE $SERVER | sed -n 's/.*has IPv6 address //p')
-
-}
-
-
 # Reset all entries related to the specific instance
 # This should be invoced only during instance modification
 # because we do not know which nics have been modify
@@ -101,7 +83,7 @@ reset_dns () {
   if [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_SET_PARAMS" ]; then
     query_dns
     # This should remove the A, AAAA, CNAME entries
-    send_command "update delete $GANETI_INSTANCE_NAME.$FZONE"
+    send_command "update delete $INSTANCE.$FZONE"
     for ip in $HOST_IP_ALL; do
       get_rev4_info $ip
       # This should remove the IPv4 reverse entry
@@ -117,12 +99,14 @@ reset_dns () {
 }
 
 
+
 # Main starts here
 
+INSTANCE=$GANETI_INSTANCE_NAME
 
 # Exit if we do not have instance name.
 # It should be exported to hooks for instance related opcodes.
-if [ -z "$GANETI_INSTANCE_NAME" ]; then
+if [ -z "$INSTANCE" ]; then
   exit 0
 fi
 
