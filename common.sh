@@ -132,12 +132,12 @@ function routed_setup_firewall {
 
 function init_ebtables {
 
-  runlocked $RUNLOCKED_OPTS ebtables -N $FROM
+  runlocked $RUNLOCKED_OPTS ebtables -N $FROM -P RETURN
   runlocked $RUNLOCKED_OPTS ebtables -A FORWARD -i $INTERFACE -j $FROM
   # This is needed for multicast packets
   runlocked $RUNLOCKED_OPTS ebtables -A INPUT -i $INTERFACE -j $FROM
 
-  runlocked $RUNLOCKED_OPTS ebtables -N $TO
+  runlocked $RUNLOCKED_OPTS ebtables -N $TO -P RETURN
   runlocked $RUNLOCKED_OPTS ebtables -A FORWARD -o $INTERFACE -j $TO
   # This is needed for multicast packets
   runlocked $RUNLOCKED_OPTS ebtables -A OUTPUT -o $INTERFACE -j $TO
