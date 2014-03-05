@@ -75,31 +75,6 @@ update_dns () {
 
 }
 
-# Reset all entries related to the specific instance
-# This should be invoced only during instance modification
-# because we do not know which nics have been modify
-reset_dns () {
-
-  if [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_SET_PARAMS" ]; then
-    query_dns
-    # This should remove the A, AAAA, CNAME entries
-    send_command "update delete $INSTANCE.$FZONE"
-    for ip in $HOST_IP_ALL; do
-      get_rev4_info $ip
-      # This should remove the IPv4 reverse entry
-      send_command "update delete $RLPART.$RZONE"
-    done
-    for ip6 in $HOST_IP6_ALL; do
-      get_rev6_info $ip6
-      # This should remove the IPv6 reverse entry
-      send_command "update delete $R6LPART$R6ZONE."
-    done
-  fi
-
-}
-
-
-
 # Main starts here
 
 INSTANCE=$GANETI_INSTANCE_NAME
@@ -111,7 +86,10 @@ if [ -z "$INSTANCE" ]; then
 fi
 
 # This runs only for instance modification
-reset_dns
+if [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_SET_PARAMS" ]; then
+  query_dns
+  reset_dns
+fi
 
 # If GANETI_INSTANCE_NIC_COUNT is not set then nothing happens
 FIRST=0

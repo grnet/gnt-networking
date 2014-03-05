@@ -444,10 +444,32 @@ function get_info () {
 # www.google.com has IPv6 address 2a00:1450:4001:80b::1012
 query_dns () {
 
+  $SNF_NETWORK_LOG $0 "Query dns for $INSTANCE"
   HOSTQ="host -s -R 3 -W 3"
   HOST_IP_ALL=$($HOSTQ $INSTANCE.$FZONE $SERVER | sed -n 's/.*has address //p')
   HOST_IP6_ALL=$($HOSTQ $INSTANCE.$FZONE $SERVER | sed -n 's/.*has IPv6 address //p')
   $SNF_NETWORK_LOG $0 "* ip($INSTANCE) -> $HOST_IP_ALL"
   $SNF_NETWORK_LOG $0 "* ip6($INSTANCE) -> $HOST_IP6_ALL"
+
+}
+
+# Reset all entries related to the specific instance
+# This should be invoced only during instance modification
+# because we do not know which nics have been modify
+reset_dns () {
+
+  # This should remove the A, AAAA, CNAME entries
+  $SNF_NETWORK_LOG $0 "Reset dns for $INSTANCE"
+  send_command "update delete $INSTANCE.$FZONE"
+  for ip in $HOST_IP_ALL; do
+    get_rev4_info $ip
+    # This should remove the IPv4 reverse entry
+    send_command "update delete $RLPART.$RZONE"
+  done
+  for ip6 in $HOST_IP6_ALL; do
+    get_rev6_info $ip6
+    # This should remove the IPv6 reverse entry
+    send_command "update delete $R6LPART$R6ZONE."
+  done
 
 }
