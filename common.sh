@@ -247,7 +247,7 @@ function get_uplink {
   UPLINK=$(ip route list table $table | grep "default via" | awk '{print $5}')
   UPLINK6=$(ip -6 route list table $table | grep "default via" | awk '{print $5}')
   if [ -n "$UPLINK" -o -n "$UPLINK6" ]; then
-    $SNF_NETWORK_LOG $0 "* Table $table: uplink -> $UPLINK, uplink6 -> $UPLINK6"
+    $SNF_NETWORK_LOG $0 "* uplink($table) -> $UPLINK, $UPLINK6"
   fi
 
 }
@@ -265,7 +265,7 @@ get_eui64 () {
     EUI64=
   else
     EUI64=$($MAC2EUI64 $mac $prefix)
-    $SNF_NETWORK_LOG $0 "* $mac + $prefix -> $EUI64"
+    $SNF_NETWORK_LOG $0 "* eui64($mac, $prefix) -> $EUI64"
   fi
 
 }
@@ -362,6 +362,7 @@ get_rev6_info () {
     R6REC=$(host $eui64 | egrep -o '([[:alnum:]]\.){32}ip6.arpa' )
     R6ZONE=$(echo $R6REC | awk -F. 'BEGIN{rpart="";} { for (i=32;i>16;i=i-1) rpart=$i "." rpart; } END{print rpart "ip6.arpa";}')
     R6LPART=$(echo $R6REC | awk -F. 'BEGIN{lpart="";} { for (i=16;i>0;i=i-1) lpart=$i "." lpart; } END{print lpart;}')
+    $SNF_NETWORK_LOG $0 "* rev6($eui64) -> $RLPART, $R6ZONE"
   fi
 
 }
@@ -385,6 +386,7 @@ get_rev4_info () {
     IFS=$OLDIFS
     RZONE="$c.$b.$a.in-addr.arpa"
     RLPART="$d"
+    $SNF_NETWORK_LOG $0 "* rev4($ip) -> $RLPART, $RZONE"
   fi
 
 }
@@ -394,6 +396,7 @@ get_ebtables_chains () {
   local iface=$1
   FROM=FROM${iface^^}
   TO=TO${iface^^}
+  # $SNF_NETWORK_LOG $0 "* ebtables($iface) -> $FROM, $TO"
 
 }
 
@@ -402,6 +405,7 @@ get_instance_info () {
   if [ -z "$GANETI_INSTANCE_NAME" -a -n "$INSTANCE" ]; then
     GANETI_INSTANCE_NAME=$INSTANCE
   fi
+  $SNF_NETWORK_LOG $0 "* instance -> $GANETI_INSTANCE_NAME"
 
 }
 
@@ -420,6 +424,7 @@ get_mode_info () {
   elif [ "$mode" = "bridged" ]; then
     INDEV=$link
   fi
+  $SNF_NETWORK_LOG $0 "* $iface + $mode -> $TABLE, $INDEV"
 
 }
 
@@ -429,7 +434,7 @@ get_mode_info () {
 # NETWORK_SUBNET, NETWORK_GATEWAY, NETWORK_SUBNET6, NETWORK_GATEWAY6
 function get_info {
 
-  $SNF_NETWORK_LOG $0 "Getting info for $INTERFACE of $GANETI_INSTANCE_NAME"
+  $SNF_NETWORK_LOG $0 "Getting info for $INTERFACE"
   get_instance_info
   get_mode_info $INTERFACE $MODE $LINK
   get_ebtables_chains $INTERFACE
@@ -454,5 +459,7 @@ query_dns () {
   HOSTQ="host -s -R 3 -W 3"
   HOST_IP_ALL=$($HOSTQ $GANETI_INSTANCE_NAME.$FZONE $SERVER | sed -n 's/.*has address //p')
   HOST_IP6_ALL=$($HOSTQ $GANETI_INSTANCE_NAME.$FZONE $SERVER | sed -n 's/.*has IPv6 address //p')
+  $SNF_NETWORK_LOG $0 "* ip($GANETI_INSTANCE_NAME) -> $HOST_IP_ALL"
+  $SNF_NETWORK_LOG $0 "* ip6($GANETI_INSTANCE_NAME) -> $HOST_IP6_ALL"
 
 }

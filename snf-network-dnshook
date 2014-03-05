@@ -153,7 +153,6 @@ for idx in $(seq $FIRST $LAST); do
     $DNS_TAG)
 
       get_info
-      $SNF_NETWORK_LOG $0 "update dns for $GANETI_INSTANCE_NAME $IP $EUI64"
       update_dns
 
       ;;
