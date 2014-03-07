@@ -46,6 +46,7 @@ if [ "$MODE" = "routed" ]; then
   :;
 elif [ "$MODE" = "bridged" ]; then
   brctl delif $BRIDGE $INTERFACE
+  try clear_bridged_setup_firewall
 fi
 
 

@@ -56,6 +56,7 @@ get_info
 try clear_routed_setup_ipv4
 try clear_routed_setup_ipv6
 try clear_routed_setup_firewall
+try clear_bridged_setup_firewall
 try clear_ebtables
 try clear_nfdhcpd
 

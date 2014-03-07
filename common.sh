@@ -75,6 +75,15 @@ function clear_routed_setup_firewall {
 
 }
 
+function clear_bridged_setup_firewall {
+
+  for oldchain in protected unprotected limited; do
+		iptables  -D FORWARD -m physdev --physdev-out $INTERFACE -j $chain
+		ip6tables -D FORWARD -m physdev --physdev-out $INTERFACE -j $chain
+  done
+
+}
+
 function clear_ebtables {
 
   runlocked $RUNLOCKED_OPTS ebtables -D FORWARD -i $INTERFACE -j $FROM
@@ -179,6 +188,34 @@ function routed_setup_firewall {
 	fi
 }
 
+# pick a firewall profile per NIC, based on tags (and apply it)
+function bridged_setup_firewall {
+	# for latest ganeti there is no need to check other but uuid
+	ifprefixindex="synnefo:network:$INTERFACE_INDEX:"
+	ifprefixname="synnefo:network:$INTERFACE_NAME:"
+	ifprefixuuid="synnefo:network:$INTERFACE_UUID:"
+	for tag in $TAGS; do
+		tag=${tag#$ifprefixindex}
+		tag=${tag#$ifprefixname}
+		tag=${tag#$ifprefixuuid}
+		case $tag in
+		protected)
+			chain=protected
+		;;
+		unprotected)
+			chain=unprotected
+		;;
+		limited)
+			chain=limited
+		;;
+		esac
+	done
+
+	if [ "x$chain" != "x" ]; then
+		iptables  -I FORWARD -m physdev --physdev-out $INTERFACE -j $chain
+		ip6tables -I FORWARD -m physdev --physdev-out $INTERFACE -j $chain
+	fi
+}
 function init_ebtables {
 
   runlocked $RUNLOCKED_OPTS ebtables -N $FROM -P RETURN
