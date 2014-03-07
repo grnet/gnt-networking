@@ -1,0 +1,24 @@
+domain (ip ip6) chain protected {
+        # Do not packets that request a new connection
+        proto tcp !syn ACCEPT;
+        # Allow dns responses
+        proto udp sport 53 ACCEPT;
+        # Allow ping
+        proto icmp ACCEPT;
+        DROP;
+}
+
+domain (ip ip6) chain limited {
+        proto tcp !syn ACCEPT;
+        # Allow ssh
+        proto tcp dport 22 ACCEPT;
+        # Allow RDP for windows
+        proto tcp dport 3389 ACCEPT;
+        proto udp sport 53 ACCEPT;
+        proto icmp ACCEPT;
+        DROP;
+}
+
+domain (ip ip6) chain unprotected {
+        ACCEPT;
+}
