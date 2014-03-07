@@ -65,6 +65,45 @@ a user provided one under `/etc/ganeti/kvm-ifup-custom` and executes it
 instead.
 
 
+vif-custom
+^^^^^^^^^^
+
+In case of Xen, Ganeti provides a hypervisor parameter that defines the script
+to be executed per NIC upon instance startup: `vif-script`. Ganeti provides
+`vif-ganeti` as example script which executes `/etc/xen/scripts/vif-custom` if
+found.
+
+
+ifup-extra
+^^^^^^^^^^
+
+Usually admins want to apply several rules that are tailored to each
+deployment.  In order to provide such functionality, the scripts that bring the
+interfaces up (kvm-ifup-custom, vif-custom), before exiting invoke a custom
+script (defined by IFUP_EXTRA_SCRIPT variable of `/etc/default/snf-network`) if
+found.  snf-network package provides an example of this script
+`/etc/ganeti/ifup-extra`.  As you can see it defines two functions;
+setup_extra() and clean_extra().  Since snf-network is not aware of the rules
+added by this script, the admin is responsible of cleaning up any stale rule
+found due to a previous invocation. In other words clean_extra() should wipe
+out every possible rule that setup_extra might add and should run always
+no matter the instance's tags.
+
+In an big data center it is reasonable to drop outgoing traffic to mailservers
+so that user do not use the cloud for spamming. Still some trusted
+instances could be allowed to connect to SMTP servers on port 25. The
+example script search for an instance tag named with prefix `some-prefix`
+and suffix `mail` and applies the desired rules. Note that if no NIC
+identifier is given, rules will be added for all interfaces of the
+instance. With other words to treat an instance as a trusted one do:
+
+.. code-block:: console
+
+  # gnt-instance add-tags instance1 some-prefix:mail
+  # gnt-instance modify --net 0: --hotplug instance1
+
+
+
 kvm-ifdown-custom
 ^^^^^^^^^^^^^^^^^
 
@@ -78,20 +117,16 @@ of NIC hot-unplug). This script searches for a user provided one under
 `/etc/ganeti/kvm-ifdown-custom` and executes it instead.
 
 
-vif-custom
-^^^^^^^^^^
-
-Ganeti provides a hypervisor parameter that defines the script to be executed
-per NIC upon instance startup: `vif-script`. Ganeti provides `vif-ganeti` as
-example script which executes `/etc/xen/scripts/vif-custom` if found.
-
-
 snf-network-hook
 ^^^^^^^^^^^^^^^^
 
-This hook gets all static info related to an instance from environment variables
-and issues any commands needed. It was used to fix node's setup upon migration
-when ifdown script was not supported but now it does nothing.
+This hook gets all static info related to an instance from environment
+variables and issues any commands needed. It was used to fix node's setup upon
+migration when ifdown script was not supported but now it does nothing.
+Specifically it was used on a routed setup to delete the neighbor proxy entry
+related to an instance's IPv6 on the source node. Otherwise the traffic
+would continue to go via the source node since there would be two nodes
+proxy-ing this IP.
 
 
 snf-network-dnshook
@@ -240,8 +275,8 @@ OUTPUT chains. To sum up the following ebtables rules are applied:
 .. code-block:: console
 
   # Create new chains
-  ebtables -t filter -N FROMTAP5
-  ebtables -t filter -N TOTAP5
+  ebtables -t filter -N FROMTAP5 -P RETURN
+  ebtables -t filter -N TOTAP5 -P RETURN
 
   # Filter multicast traffic from VM
   ebtables -t filter -A INPUT -i tap5 -j FROMTAP5
@@ -269,17 +304,57 @@ server.  `ifup` and `ifdown` scripts, if `dns` network tag is found, will use
 managed.
 
 
-Contents:
+nfdhcpd
+^^^^^^^
 
-.. toctree::
-   :maxdepth: 2
+snf-network creates binding files with all info required under
+`/var/lib/nfdhcpd/` directore so that `nfdhcpd
+<http://www.synnefo.org/docs/nfdhcpd/latest/index.html>`_ can reply
+to DHCP, NS, RS, DHCPv6 and thus instances get properly configured.
 
 
 
-Indices and tables
-==================
+Firewall
+--------
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+Synnefo defines three security levels: protected, limited, and unprotected.
 
+- Protected means that traffic requesting new connections will be dropped,
+  dns responses (dport 53) will be accepted, icmp protocol (ping) will be
+  accepted and everything else dropped.
+
+- Limited additionally allows ssh (dport 22) and rdp (dport 3389).
+
+- Unprotected accepts everything.
+
+This firewall profile is defined per NIC. Since NICs are not taggable objects
+in Ganeti we tag instances instead. The tag should be of the following
+format:
+
+synnefo:network:<ident>:<profile>
+
+`ident` is the NIC identifier (index, uuid or name).
+`profile` is one of the above security levels.
+
+snf-network package provides `/etc/ferm/snf-network.ferm` which defines
+the corresponding iptables chains with the proper rules.
+
+routed setup
+^^^^^^^^^^^^
+
+Since the node is the router for the VMs, the traffic gets through FORWARD
+chain. So if a tag is found we add the following rule:
+
+.. code-block:: console
+
+  # iptables -t filter -I FORWARD -o $INTERFACE -j $chain
+
+
+bridged setup
+^^^^^^^^^^^^^
+
+In case traffic goes through a bridge we need physdev module of iptables:
+
+.. code-block:: console
+
+  # iptables -t filter -I FORWARD -m physdev --physdev-out $INTERFACE -j $chain
