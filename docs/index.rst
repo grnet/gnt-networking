@@ -7,7 +7,7 @@ Welcome to snf-network's documentation!
 =======================================
 
 snf-network is a set of scripts that handle the network configuration of
-an instance inside a Ganeti cluster. It takes advantange of the
+an instance inside a Ganeti cluster. It takes advantage of the
 variables that Ganeti exports to their execution environment and issue
 all the necessary commands to ensure network connectivity to the instance
 based on the requested setup.
@@ -40,7 +40,7 @@ are inherited by the network in which a NIC resides (optional).
 Scripts
 -------
 
-The scripts can be devided into two categories:
+The scripts can be divided into two categories:
 
 1. The scripts that are invoked explicitly by Ganeti upon NIC creation.
 
@@ -51,13 +51,13 @@ The first group has the exact NIC info that is about to be configured where
 the latter one has the info of the whole instance. The big difference is that
 instance configuration (from the master perspective) might vary or be total
 different from the one that is currently running. The reason is that some
-modifications can take place without hotplug.
+modifications can take place without hotplugging.
 
 
 kvm-ifup-custom
 ^^^^^^^^^^^^^^^
 
-Ganeti upon instance startup and NIC hotplug creates the TAP devices to
+Ganeti upon instance startup and NIC hotplugging creates the TAP devices to
 reflect to the instance's NICs. After that it invokes the Ganeti's `kvm-ifup`
 script with the TAP name as first argument and an environment including
 all NIC's and the corresponding network's info. This script searches for
@@ -89,7 +89,7 @@ example script which executes `/etc/xen/scripts/vif-custom` if found.
 snf-network-hook
 ^^^^^^^^^^^^^^^^
 
-This hook gets all static info related to an instance from evironment variables
+This hook gets all static info related to an instance from environment variables
 and issues any commands needed. It was used to fix node's setup upon migration
 when ifdown script was not supported but now it does nothing.
 
@@ -101,7 +101,7 @@ This hook updates an external `DDNS <https://wiki.debian.org/DDNS>`_ setup via
 ``nsupdate``. Since we add/remove entries during ifup/ifdown scripts, we use
 this only during instance remove/shutdown/rename. It does not rely on exported
 environment but it queries first the DNS server to obtain current entries and
-then it invokes the neccessary commands to remove them (and the relevant
+then it invokes the necessary commands to remove them (and the relevant
 reverse ones too).
 
 
@@ -121,9 +121,9 @@ ip-less-routed
 
 This setup has the following characteristics:
 
-* An external gateway on the same collition domain with all nodes on some
+* An external gateway on the same collision domain with all nodes on some
   interface (e.g. eth1, eth0.200) is needed.
-* Each node is a router for the hostes VMs
+* Each node is a router for the hosted VMs
 * The node itself does not have an IP inside the routed network
 * The node does proxy ARP for IPv4 networks
 * The node does proxy NDP for IPv6 networks while RA and NA are
@@ -153,7 +153,7 @@ Since we suppose to be on the same link with the router, ARP takes place first:
 
  - ARP, Request who-has GW_IP tell IP
  - ARP, Reply GW_IP is-at TAP_MAC ``echo 1 > /proc/sys/net/conf/TAP/proxy_arp``
- - So `arp -na` insided the VM shows: ``(GW_IP) at TAP_MAC [ether] on eth0``
+ - So `arp -na` inside the VM shows: ``(GW_IP) at TAP_MAC [ether] on eth0``
 
 2) The host wants to know the GW_MAC. Since the node does **not** have an IP
    inside the network we use the dummy one specified above.
@@ -180,7 +180,7 @@ With the above we have a working proxy ARP configuration. The rest is done
 via simple L3 routing. Lets assume the following:
 
 * ``TABLE`` is the extra routing table
-* ``SUBNET`` is the IPv4 subnet where the VM's IP reside
+* ``SUBNET`` is the IPv4 subnet where the VM's IP resides
 
 1) Outgoing traffic:
 
@@ -193,7 +193,7 @@ via simple L3 routing. Lets assume the following:
 
  - Packet arrives at router
  - Router knows from proxy ARP that the IP is at DEV_MAC.
- - Router sends ethernet packet with tgt DEV_MAC
+ - Router sends Ethernet packet with tgt DEV_MAC
  - Host receives the packet from DEV interface
  - Traffic coming out DEV is routed via TABLE
    ``ip rule add dev DEV table TABLE``
@@ -223,17 +223,17 @@ private-filtered
 ^^^^^^^^^^^^^^^^
 
 In order to provide L2 isolation among several VMs we can use ebtables on a
-**single** bridge. The infrastracture must provide a physical VLAN or separate
-interaface shared among all nodes in the cluster. All virtual interfaces will
+**single** bridge. The infrastructure must provide a physical VLAN or separate
+interface shared among all nodes in the cluster. All virtual interfaces will
 be bridged on a common bridge (e.g. ``prv0``) and filtering will be done via
 ebtables and MAC prefix. The concept is that all interfaces on the same L2
-should have the same MAC prefix. MAC prefix uniqueness is quaranteed by
-synnefo and passed to Ganeti as a network option.
+should have the same MAC prefix. MAC prefix uniqueness is guaranteed by
+Synnefo and passed to Ganeti as a network option.
 
 To ensure isolation we should allow traffic coming from tap to have specific
 source MAC and at the same time allow traffic coming to tap to have a source
 MAC in the same MAC prefix. Applying those rules only in FORWARD chain will not
-guarantee isolation. The reason is because packets with target MAC a `mutlicast
+guarantee isolation. The reason is because packets with target MAC a `multicast
 address <http://en.wikipedia.org/wiki/Multicast_address>`_ go through INPUT and
 OUTPUT chains. To sum up the following ebtables rules are applied:
 
