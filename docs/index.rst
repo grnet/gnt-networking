@@ -166,8 +166,51 @@ This setup has the following characteristics:
   `nfdhcpd <http://www.synnefo.org/docs/nfdhcpd/latest/index.html>`_
   since the VMs are not on the same link with the router.
 
-Lets analyze a simple PING from an instance to an external IP using this setup.
-We assume the following:
+
+configuration
+"""""""""""""
+
+In order to use this setup all nodes should have been prior properly
+configured. A sample `/etc/network/interfaces` could be:
+
+.. code-block:: console
+
+  auto eth1
+  iface eth1 inet manual
+    up ip route add 192.0.2.0/24 dev eth1
+    up ip route add 192.0.2.0/24 dev eth1 table snf_public
+    up ip route add default via 192.0.2.1 dev eth1 table snf_public
+    up ip rule add iif eth1 lookup snf_public
+    up arptables -I OUTPUT -o eth1 --opcode 1 --mangle-ip-s 192.0.2.254
+
+For an IPv6 setup this could be:
+
+.. code-block:: console
+
+  auto eth1
+  iface eth1 inet6 manual
+    up ip -6 route add 2001:db8::/64 dev eth1
+    up ip -6 route add 2001:db8::/64 dev eth1 table snf_public
+    up ip -6 route add default via 2001:db8::1 dev eth1 table snf_public
+    up ip -6 rule add iif eth1 lookup snf_public
+    up echo 1 > /proc/sys/net/ipv6/conf/eth1/proxy_ndp
+
+Of course we should enable forwarding and define `snf_public` routing
+table first:
+
+.. code-block:: console
+
+  echo 1 > /proc/sys/net/ipv4/conf/all/forwarding
+  echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
+  echo 10 snf_public >> /etc/iproute2/rt_tables
+
+In order to use a more compact `interfaces` file, custom scripts should be
+used for ifup/ifdown since this setup is not a common practice.  Currently
+these scripts are included only as examples in snf-network package but soon
+will be provided by `snf-network-helper`. Please see `interfaces` example along
+with `vmrouter.ifup`, `vmrouter.ifdown`.
+
+So let's assume the following:
 
 * ``IP`` is the instance's IP
 * ``GW_IP`` is the external router's IP
@@ -181,6 +224,9 @@ We assume the following:
 
 * ``DEV`` is the node's device that the router is visible from
 * ``TAP`` is the host interface connected with the instance's eth0
+
+Proxy ARP
+"""""""""
 
 Since we suppose to be on the same link with the router, ARP takes place first:
 
@@ -211,8 +257,11 @@ Since we suppose to be on the same link with the router, ARP takes place first:
  - ARP, Reply IP is-at DEV_MAC (Created by host's DEV)
 
 
+L3 Routing
+""""""""""
+
 With the above we have a working proxy ARP configuration. The rest is done
-via simple L3 routing. Lets assume the following:
+via simple L3 routing. We assume the following:
 
 * ``TABLE`` is the extra routing table
 * ``SUBNET`` is the IPv4 subnet where the VM's IP resides
@@ -242,12 +291,13 @@ via simple L3 routing. Lets assume the following:
 
 The IPv6 setup is pretty similar but instead of proxy ARP we have proxy NDP
 and RS and NS coming from TAP are served by nfdhpcd. RA contain network's
-prefix and has M flag unset in order the VM to obtain its IP6 via SLAAC and
+prefix and have M flag unset in order the VM to obtain its IP6 via SLAAC, and
 O flag set to obtain static info (nameservers, domain search list) via DHCPv6
 (also served by nfdhcpd).
 
-Again the VM sees on its link local only TAP which is supposed to be the
-Router. The host does proxy for IP6 ``ip -6 neigh add EUI64 dev DEV``.
+Again the VM sees only the TAP interface as Router and Neighbor on its link
+local space. The host must proxy the VM's IPv6
+``ip -6 neigh add EUI64 dev DEV``.
 
 When an interface gets up inside a host we should invalidate all entries
 related to its IP among other nodes and the router. For proxy ARP we do
