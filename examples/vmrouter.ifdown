@@ -1,0 +1,22 @@
+#!/bin/bash
+
+if [ ! -n "$IF_IP_ROUTING_TABLE" ]; then
+	# bail out early if there's no ip-routing-table defined
+	exit 0
+fi
+
+if [ "$ADDRFAM" = "inet" ]; then
+	IP="ip"
+elif [ "$ADDRFAM" = "inet6" ]; then
+	IP="ip -6"
+else
+	exit 0
+fi
+
+while $IP rule del iif $IFACE;do :; done 2>/dev/null
+
+if [ "$ADDRFAM" = "inet" ]; then
+	if [ -n "$IF_ARP_IP" ]; then
+		arptables -D OUTPUT -o $IFACE --opcode request -j mangle 2>/dev/null || true
+	fi
+fi
