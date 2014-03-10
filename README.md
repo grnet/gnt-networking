@@ -31,7 +31,7 @@ Project Page
 ------------
 
 Please see the [official Synnefo site](http://www.synnefo.org) and the
-[latest snf-image-creator docs](http://www.synnefo.org/docs/snf-network/latest/index.html)
+[latest snf-network docs](http://www.synnefo.org/docs/snf-network/latest/index.html)
 for more information.
 
 
