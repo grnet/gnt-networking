@@ -1,30 +1,34 @@
-###############
-# GRNET SETUP #
-###############
+################
+# ROUTED SETUP #
+################
 # IP-less routing / proxy arp interfaces examples:
+#
+# NOTE: The following setup needs grnet-vnode-tools debian package
+# that provides some custom ifup/ifdown scripts
+#
 # This vlan is used for internet connection of the VMs
 # The gateway is a router that connects all nodes VLANs
 # snf_public should be an existing routing table (in /etc/iproute/rt_tables)
 # The values of ip-routes and ip-gateway must be the same
-# decrared in ganeti network related to this routing table.
-# gnt-network add --network=62.217.123.128/27 --gateway=62.217.123.129 
-#                 --network6=2001:648:2ffc:1201::/64 --gateway6=2001:648:2ffc:1201::1
+# decrared in Ganeti network related to this routing table.
+# gnt-network add --network=192.0.2.0/24 --gateway=192.0.2.1
+#                 --network6=2001:db8::/64 --gateway6=2001:db8::/1
 #                 --network-type=public --tags=nfdhcpd,ip-less-routed snf-net-1
-# gnt-network connect snf-net-1 all routed snf_public
+# gnt-network connect snf-net-1 routed snf_public
 
 auto eth0.201
 iface eth0.201 inet manual
   ip-routing-table snf_public
-  ip-routes 62.217.123.128/27
-  ip-gateway 62.217.123.129
+  ip-routes 192.0.2.0/24
+  ip-gateway 192.0.2.1
   ip-forwarding 1
   ip-proxy-arp 1
-  arp-ip 62.217.123.158
+  arp-ip 192.0.2.254
 
 iface eth0.201 inet6 manual
   ip-routing-table snf_public
-  ip-routes 2001:648:2ffc:1201::/64
-  ip-gateway 2001:648:2ffc:1201::1
+  ip-routes 2001:db8::/64
+  ip-gateway 2001:db8::1
   ip-forwarding 1
   ip-proxy-ndp 1
 
@@ -37,8 +41,8 @@ iface eth0.201 inet6 manual
 # prv5            8000.e4115bb2925c       no              eth0.2995
 auto prv
 iface prv inet manual
-    up   prv-net-helper up   eth0 1 5 2990 prv
-    down prv-net-helper down eth0 1 5 2990 prv
+    up   prv-net-helper up   eth0 1 5 2990
+    down prv-net-helper down eth0 1 5 2990
 
 # A bridge to connect tap devices of private networks
 # All private networks use this bridge
@@ -49,24 +53,21 @@ iface prv0 inet manual
   bridge_ports eth0.2990
   bridge_stp off
   bridge_fd 2
-  post-up ip link set prv0 address e4:11:5b:b2:92:5c 
+  post-up ip link set prv0 address 3c:97:0e:81:ee:45
 
 
 #################
-# GENERIC SETUP #
+# BRIDGED SETUP #
 #################
-# All taps bridged on this bridged
-# eth0 is the node's primary interface
-# 62.217.123.132/27 is the node's primary address
-# 62.217.123.129 is the node's primary Gateway
-# aa:00:00:32:50:51 is the node's primary MAC address
+# All TAP interfaces bridged on a common bridge: br0
+# eth0 is the node's primary interface with internet access
+# eth1 is a common interface on all nodes (can be a vlan too)
+# one node will do MASQ
 auto br0
 iface br0 inet manual
-  bridge_ports eth0
+  bridge_ports eth1
   bridge_stp off
   bridge_fd 2
-  up for ip in 62.217.123.132/27; do ip addr add $ip dev br0; done 
-  up ip route add default via 62.217.123.129 dev br0
-  post-up ip link set br0 address aa:00:00:32:50:51 
-
-
+  # These apply only for host that will do NAT
+  up ip addr add 192.0.2.1/24 dev br0
+  post-up iptables -t nat -A POSTROUTING -o eth0 -s 192.0.2.0/24 -j MASQUERADE
