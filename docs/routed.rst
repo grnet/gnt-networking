@@ -3,7 +3,7 @@
 Routed Setup
 ------------
 
-In the following section we are going to describe how we can achive a routed
+In the following section we are going to describe how we can achieve a routed
 setup for a specific subnet across the data center. We distinguish here
 two ways to do that:
 
@@ -14,13 +14,13 @@ two ways to do that:
    external router (Gateway).
 
 Whether the external router will do NAT or not depends on whether we have
-a public routable subnet available or just a single node with internet
+a public route-able subnet available or just a single node with internet
 access.
 
 For the next examples we assume that the route-able subnet will be
 ``192.0.2.0/24``, the gateway ``192.0.2.1``, nodes primary interface will
 be ``eth0`` while VM traffic will go through ``eth0.0`` physical VLAN.
-Of cource ``eth0.222`` can be substituted with a separate physical interface
+Of course ``eth0.222`` can be substituted with a separate physical interface
 (e.g. ``eth1``). All examples use `/etc/networ/interfaces` file, the
 common way for configuring static interfaces under Debian.
 
@@ -49,7 +49,7 @@ setup is:
       # Enable proxy ARP and forwarding
       up echo 1 > /proc/sys/net/ipv4/conf/eth0.222/proxy_arp
       up echo 1 > /proc/sys/net/ipv4/conf/eth0.222/forwarding
-      # Mangle arp request originating from the host
+      # Mangle ARP request originating from the host
       up arptables -A OUTPUT -o eth0.222 --opcode request -j mangle --mangle-ip-s 192.0.2.254
       down arptables -D OUTPUT -o eth0.222 --opcode request -j mangle
       down ip rule del iif eth0.222 lookup 222
@@ -111,7 +111,7 @@ Routed Traffic
 ^^^^^^^^^^^^^^
 
 Here we break down all stages of networking and analyze how we connectivity
-is actually achived. To do so let's first assume the following:
+is actually achieved. To do so let's first assume the following:
 
 * ``IP`` is the instance's IP
 * ``GW_IP`` is the external router's IP
@@ -119,7 +119,7 @@ is actually achived. To do so let's first assume the following:
 * ``ARP_IP`` is a dummy IP inside the network needed for proxy ARP
 
 * ``MAC`` is the instance's MAC
-* ``TAP_MAC`` is the tap's MAC
+* ``TAP_MAC`` is the TAP's MAC
 * ``DEV_MAC`` is the host's DEV MAC
 * ``GW_MAC`` is the external router's MAC
 

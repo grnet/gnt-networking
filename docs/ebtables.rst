@@ -8,8 +8,8 @@ center is practically impossible (currently expensive switches provide less
 than 1024 vlans trucked on all ports), L2 isolation can be achieved via
 MAC filtering on a common bridge over a single VLAN.
 
-To ensure isolation we should allow traffic coming from tap to have specific
-source MAC and at the same time allow traffic coming to tap to have a source
+To ensure isolation we should allow traffic coming from TAP to have specific
+source MAC and at the same time allow traffic coming to TAP to have a source
 MAC in the same MAC prefix. Applying those rules only in FORWARD chain will not
 guarantee isolation. The reason is because packets with target MAC a `multicast
 address <http://en.wikipedia.org/wiki/Multicast_address>`_ go through INPUT and

@@ -146,7 +146,7 @@ Supported Setups
 Currently since NICs in Ganeti are not taggable objects, we use network's and
 instance's tags to customize each NIC configuration. NIC inherits the network's
 tags (if attached to any) and further customization can be achieved with
-instance tags e.g. <tag prefix>:<nic uuid or name>:<tag>. In the following
+instance tags e.g. <tag prefix>:<NIC's UUID or name>:<tag>. In the following
 subsections we will mention all supported tags and their reflected underline
 setup.
 
@@ -198,7 +198,7 @@ nfdhcpd
 ^^^^^^^
 
 snf-network creates binding files with all info required under
-`/var/lib/nfdhcpd/` directore so that `nfdhcpd
+`/var/lib/nfdhcpd/` directory so that `nfdhcpd
 <http://www.synnefo.org/docs/nfdhcpd/latest/index.html>`_ can reply
 to DHCP, NS, RS, DHCPv6 and thus instances get properly configured.
 
@@ -210,10 +210,10 @@ Firewall
 Synnefo defines three security levels: protected, limited, and unprotected.
 
 - Protected means that traffic requesting new connections will be dropped,
-  dns responses (dport 53) will be accepted, icmp protocol (ping) will be
+  DNS responses (dport 53) will be accepted, icmp protocol (ping) will be
   accepted and everything else dropped.
 
-- Limited additionally allows ssh (dport 22) and rdp (dport 3389).
+- Limited additionally allows SSH (dport 22) and RDP (dport 3389).
 
 - Unprotected accepts everything.
 
