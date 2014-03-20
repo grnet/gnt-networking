@@ -6,28 +6,68 @@
 Welcome to snf-network's documentation!
 =======================================
 
-snf-network is a set of scripts that handle the network configuration of
+snf-network is a set of scripts that handles the network configuration of
 an instance inside a Ganeti cluster. It takes advantage of the
-variables that Ganeti exports to their execution environment and issue
+variables that Ganeti exports to its execution environment and issues
 all the necessary commands to ensure network connectivity to the instance
 based on the requested setup.
 
-Environment
------------
 
-Ganeti supports `IP pool management
-<http://docs.ganeti.org/ganeti/master/html/design-network.html>`_
-so that end-user can put instances inside networks and get all information
-related to the network in scripts. Specifically the following options are
-exported:
+Ganeti Mechanism
+----------------
+
+Each instance in Ganeti has NICs. Each NIC has the ip, mac, mode and link
+options. Since `IP pool management
+<http://docs.ganeti.org/ganeti/master/html/design-network.html>`_ has be merged
+upstream, the end-user can define networks and put NICs inside them (via the
+network option). In such a case the mode and link options are inherited by
+the network's setup inside each nodegroup. So the basic procedure includes the
+following steps:
+
+.. code-block:: console
+
+  # gnt-network add --network 192.0.2.0/24 test
+  # gnt-network connect test bridged br100
+  # gnt-instance add --net 0:ip=pool,network=test ... inst
+
+The instance will then have a NIC with ip=192.0.2.1, mode=bridged, link=br100.
+In order Ganeti to actually ensure each NIC's connectivity it invokes certain
+scripts. Those can be divided in two categories:
+
+1. The ones invoked upon NIC creation/removal. Those are explicitly invoked
+   by node daemon who exports to their execution environment the exact NIC's
+   info that is to be (un)configured.
+
+2. The ones invoked by the Ganeti Hooks Manager before or after an
+   opcode execution. The info exported there is the whole instance's
+   configuration. The big difference from the previous ones is that
+   instance configuration (from the master perspective) might vary or be total
+   different from the one that is currently running. The reason is that some
+   modifications can take place without hotplugging, which results to
+   inconsistencies between runtime and config data.
+
+Official Ganeti package ships the `kvm-ifup`, `kvm-ifdown`, and `vif-ganeti`
+scripts. Those are more or less example files as they ensure nothing more than
+a very basic configuration setup.
+
+
+.. _environment:
+
+Exported Environment
+^^^^^^^^^^^^^^^^^^^^
+
+The scripts that are about to configure the NIC's setup get all needed info
+from their execution environment. Ganeti is responsible to to export the
+following variables:
 
 * IP
 * MAC
 * MODE
 * LINK
 
-are per NIC specific, whereas:
+If the NIC resides inside a network the additional variables are exported:
 
+* NETWORK_NAME
 * NETWORK_SUBNET
 * NETWORK_GATEWAY
 * NETWORK_MAC_PREFIX
@@ -35,38 +75,24 @@ are per NIC specific, whereas:
 * NETWORK_SUBNET6
 * NETWORK_GATEWAY6
 
-are inherited by the network in which a NIC resides (optional).
-
-Scripts
--------
-
-The scripts can be divided into two categories:
-
-1. The scripts that are invoked explicitly by Ganeti upon NIC creation.
-
-2. The scripts that are invoked by Ganeti Hooks Manager before or after an
-   opcode execution.
-
-The first group has the exact NIC info that is about to be configured where
-the latter one has the info of the whole instance. The big difference is that
-instance configuration (from the master perspective) might vary or be total
-different from the one that is currently running. The reason is that some
-modifications can take place without hotplugging.
+In case of hooks these variables are prefixed with "GANETI_INSTANCE_NIC<idx>\_"
+where <idx> is each NIC's index.
 
 
-kvm-ifup-custom
-^^^^^^^^^^^^^^^
+kvm-ifup
+^^^^^^^^
 
-Ganeti upon instance startup and NIC hotplugging creates the TAP devices to
-reflect to the instance's NICs. After that it invokes the Ganeti's `kvm-ifup`
-script with the TAP name as first argument and an environment including
-all NIC's and the corresponding network's info. This script searches for
-a user provided one under `/etc/ganeti/kvm-ifup-custom` and executes it
-instead.
+Upon instance startup and NIC hotplugging, Ganeti creates a TAP device for each
+instance's NIC. For each TAP the `kvm-ifup` script
+is explicitly invoked with the TAP name as the first argument and the
+environment mentioned :ref:`above <environment>`.
+
+This script searches for a user provided one under
+`/etc/ganeti/kvm-ifup-custom` and executes it instead.
 
 
-vif-custom
-^^^^^^^^^^
+vif-ganeti (Xen's kvm-ifup)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In case of Xen, Ganeti provides a hypervisor parameter that defines the script
 to be executed per NIC upon instance startup: `vif-script`. Ganeti provides
@@ -74,8 +100,59 @@ to be executed per NIC upon instance startup: `vif-script`. Ganeti provides
 found.
 
 
-ifup-extra
+kvm-ifdown
 ^^^^^^^^^^
+
+In order to cleanup or modify the node's setup or the configuration of an
+external component, Ganeti upon instance shutdown, successful instance
+migration on source node and NIC hot-unplug explicitly invokes `kvm-ifdown`
+script with the TAP name as first argument and a
+boolean second argument pointing whether we want to do local cleanup only (in
+case of instance migration) or totally unconfigure the interface along with
+e.g., any DNS entries (in case of NIC hot-unplug). This script searches for a
+user provided one under `/etc/ganeti/kvm-ifdown-custom` and executes it
+instead.
+
+
+snf-network's scripts
+---------------------
+
+Here we briefly describe all scripts provided by snf-network package. Those
+scripts are needed to support the setups mentioned :ref:`below <setups>`.
+
+
+Scripts
+^^^^^^^
+
+snf-network includes the following NIC configuration scripts. As mentioned
+before those scripts are indirectly executed by the ones
+shipped with Ganeti (`kvm-ifup`, `kvm-ifdown`, `vif-ganeti`).
+
+
+kvm-ifup-custom
+"""""""""""""""
+
+Installed under `/etc/ganeti/kvm-ifup-custom`. It gets the exported
+environment, and based on the tags found acts accordingly. Specifically it
+cleans up all stale rules for the specific interface, and then based on NIC's
+mode, network's and instance's tags issues various rules (brctl, ip, iptables,
+etc.). Finally if executes the :ref:`extra <extra>` script if found.
+
+
+vif-custom (Xen's kvm-ifup-custom)
+""""""""""""""""""""""""""""""""""
+
+Installed under `/etc/xen/scripts/vif-custom`. It sources the appropriate file
+under `/var/run/ganeti/xen-hypervisor/nic/<idx>` which is created by Ganeti and
+includes all the necessary info. Just like all Xen scripts it calls `success`
+method of `vif-common.sh` to notify Xen that the configuration has succeeded.
+Besides that it does exactly what `kvm-ifup-custom` does.
+
+
+.. _extra:
+
+ifup-extra
+""""""""""
 
 Usually admins want to apply several rules that are tailored to each
 deployment.  In order to provide such functionality, the scripts that bring the
@@ -103,26 +180,29 @@ instance. With other words to treat an instance as a trusted one do:
   # gnt-instance modify --net 0: --hotplug instance1
 
 
-
 kvm-ifdown-custom
-^^^^^^^^^^^^^^^^^
+"""""""""""""""""
 
-In order to cleanup or modify the node's setup or the configuration of an
-external component, Ganeti upon instance shutdown, successful instance
-migration on source node and NIC hot-unplug invokes `kvm-ifdown` script
-with the TAP name as first argument and a boolean second argument pointing
-whether we want to do local cleanup only (in case of instance migration) or
-totally unconfigure the interface along with e.g., any DNS entries (in case
-of NIC hot-unplug). This script searches for a user provided one under
-`/etc/ganeti/kvm-ifdown-custom` and executes it instead.
+Installed under `/etc/ganeti/kvm-ifdown-custom`. This is currently used
+on a best effort basis and tries to cleanup node local setup related
+to the interfaces that is being brought down.
+
+
+Hooks
+^^^^^
+
+snf-network includes two hooks that are installed under `/etc/ganeti/hooks`.
 
 
 snf-network-hook
-^^^^^^^^^^^^^^^^
+""""""""""""""""
+
+Installed under `instance-stop-post.d`, `instance-failover-post.d`,
+`instance-remove-post.d` and `instance-migrate-post.d` hook dirs.
 
 This hook gets all static info related to an instance from environment
-variables and issues any commands needed. It was used to fix node's setup upon
-migration when ifdown script was not supported but now it does nothing.
+variables and issues any commands needed. Before ifdown script was supported,
+it was used to fix node's setup upon migration. Now it does nothing.
 Specifically it was used on a routed setup to delete the neighbor proxy entry
 related to an instance's IPv6 on the source node. Otherwise the traffic
 would continue to go via the source node since there would be two nodes
@@ -130,7 +210,10 @@ proxy-ing this IP.
 
 
 snf-network-dnshook
-^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""
+
+Installed under `instance-stop-post.d`, `instance-rename-post.d` and
+`instance-remove-post.d` hook dirs.
 
 This hook updates an external `DDNS <https://wiki.debian.org/DDNS>`_ setup via
 ``nsupdate``. Since we add/remove entries during ifup/ifdown scripts, we use
@@ -140,15 +223,16 @@ then it invokes the necessary commands to remove them (and the relevant
 reverse ones too).
 
 
+.. _setups:
+
 Supported Setups
 ----------------
 
-Currently since NICs in Ganeti are not taggable objects, we use network's and
-instance's tags to customize each NIC configuration. NIC inherits the network's
-tags (if attached to any) and further customization can be achieved with
-instance tags e.g. <tag prefix>:<NIC's UUID or name>:<tag>. In the following
-subsections we will mention all supported tags and their reflected underline
-setup.
+Currently since NICs in Ganeti are not taggable objects, we use network's tags
+to customize each NIC configuration. If a NIC resides inside a network, its
+tags are inherited and exported as the NETWORK_TAGS environment variable.  In
+the following subsections we will mention all supported tags and their
+reflected underline setup.
 
 
 ip-less-routed
@@ -166,13 +250,12 @@ This setup has the following characteristics:
   `nfdhcpd <http://www.synnefo.org/docs/nfdhcpd/latest/index.html>`_
   since the VMs are not on the same link with the router.
 
-
 Please see :ref:`here <routed-conf>` how to configure it, and :ref:`here
 <routed-traffic>` how it actually works.
 
 
-private-filtered
-^^^^^^^^^^^^^^^^
+mac-filtered
+^^^^^^^^^^^^
 
 In order to provide L2 isolation among several VMs we can use ebtables on a
 **single** bridge. The infrastructure must provide a physical VLAN or separate
@@ -185,13 +268,28 @@ Synnefo and passed to Ganeti as a network option.
 For further info and implementation details please see :ref:`here <ebtables>`.
 
 
+physical-vlan
+^^^^^^^^^^^^^
+
+L2 isolation can be ensured also with one dedicated physical VLAN per
+network. Each VLAN must be pre-provisioned and bridged on a separate bridge.
+So this tag actually does nothing more that bridging the TAP
+interface to the corresponding bridge (found through the LINK variable).
+
+Please note that one-to-one relationship between bridges, vlans, and network
+should be guaranteed by the end-user or some other external component
+(Synnefo).
+
+
 dns
 ^^^
 
 snf-network can update an external `DDNS <https://wiki.debian.org/DDNS>`_
-server.  `ifup` and `ifdown` scripts, if `dns` network tag is found, will use
+server. If the `dns` network tag is found, `snf-network-dnshook` will use
 `nsupdate` and add/remove entries related to the interface that is being
-managed.
+managed. To enable it the admin must set SERVER (the IP of the DNS server),
+FZONE (the domain of the instances), KEYFILE (the .private file created by
+dnssec-keygen) variables found in `/etc/default/snf-network`.
 
 
 nfdhcpd
@@ -203,22 +301,22 @@ snf-network creates binding files with all info required under
 to DHCP, NS, RS, DHCPv6 and thus instances get properly configured.
 
 
-
 Firewall
 --------
 
-Synnefo defines three security levels: protected, limited, and unprotected.
+snf-network defines three security levels: protected, limited, and unprotected.
 
 - Protected means that traffic requesting new connections will be dropped,
-  DNS responses (dport 53) will be accepted, icmp protocol (ping) will be
+  DNS responses (dport 53) will be accepted, ICMP protocol (ping) will be
   accepted and everything else dropped.
 
 - Limited additionally allows SSH (dport 22) and RDP (dport 3389).
 
 - Unprotected accepts everything.
 
-This firewall profile is defined per NIC. Since NICs are not taggable objects
-in Ganeti we tag instances instead. The tag should be of the following
+Adding a network tag to define NICs' firewalling would force all NICs inside
+the same network to have the same firewall configuration. This does not make
+any sense. So instead of network tags we use instance tags in the following
 format:
 
 synnefo:network:<ident>:<profile>
