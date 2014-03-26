@@ -1,4 +1,4 @@
-domain (ip ip6) chain protected {
+domain (ip ip6) chain protected mod comment comment snf-network_ferm {
         # Do not packets that request a new connection
         proto tcp !syn ACCEPT;
         # Allow dns responses
@@ -8,7 +8,7 @@ domain (ip ip6) chain protected {
         DROP;
 }
 
-domain (ip ip6) chain limited {
+domain (ip ip6) chain limited mod comment comment snf-network_ferm {
         proto tcp !syn ACCEPT;
         # Allow ssh
         proto tcp dport 22 ACCEPT;
@@ -19,6 +19,6 @@ domain (ip ip6) chain limited {
         DROP;
 }
 
-domain (ip ip6) chain unprotected {
+domain (ip ip6) chain unprotected mod comment comment snf-network_ferm {
         ACCEPT;
 }

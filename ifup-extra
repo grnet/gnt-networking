@@ -58,7 +58,9 @@ source /usr/lib/snf-network/common.sh
 function clean_extra (){
 
   iptables -D FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT
+  iptables -D FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT -m comment --comment "snf-network_extra"
   ip6tables -D FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT
+  ip6tables -D FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT -m comment --comment "snf-network_extra"
 
 }
 
@@ -84,17 +86,29 @@ function setup_extra () {
       mail)
       # Here add iptalbes rule..
       $SNF_NETWORK_LOG $0 "Tag $tag found: Applying rule for $INTERFACE..."
-      iptables -I FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT
-      ip6tables -I FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT
+      iptables  -I FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT -m comment --comment "snf-network_extra"
+      ip6tables -I FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT -m comment --comment "snf-network_extra"
     ;;
     esac
   done
 
 }
 
+function save_all_tables () {
+
+  mkdir -p /etc/iptables
+  date > /etc/iptables/date
+  iptables-save > /etc/iptables/snf-network.v4
+  ip6tables-save > /etc/iptables/snf-network.v6
+  arptables-save > /etc/iptables/snf-network.arp
+
+}
+
 try clean_extra
 
 setup_extra
+
+save_all_tables
 
 exit 0
 

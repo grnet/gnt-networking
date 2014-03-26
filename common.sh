@@ -44,7 +44,9 @@ function try {
 function clear_routed_setup_ipv4 {
 
  arptables -D OUTPUT -o $INTERFACE --opcode request -j mangle
+ arptables -D OUTPUT -o $INTERFACE --opcode request -j mangle -m comment --comment "snf-network_proxy-arp"
  while ip rule del dev $INTERFACE; do :; done
+ # This is needed for older snf-network versions
  iptables -D FORWARD -i $INTERFACE -p udp --dport 67 -j DROP
 
 }
@@ -70,7 +72,9 @@ function clear_routed_setup_firewall {
 
   for oldchain in protected unprotected limited; do
     iptables  -D FORWARD -o $INTERFACE -j $oldchain
+    iptables  -D FORWARD -o $INTERFACE -j $oldchain -m comment --comment "snf-network_firewall"
     ip6tables -D FORWARD -o $INTERFACE -j $oldchain
+    ip6tables -D FORWARD -o $INTERFACE -j $oldchain -m comment --comment "snf-network_firewall"
   done
 
 }
@@ -79,7 +83,9 @@ function clear_bridged_setup_firewall {
 
   for oldchain in protected unprotected limited; do
 		iptables  -D FORWARD -m physdev --physdev-out $INTERFACE -j $chain
+		iptables  -D FORWARD -m physdev --physdev-out $INTERFACE -j $chain -m comment --comment "snf-network_firewall"
 		ip6tables -D FORWARD -m physdev --physdev-out $INTERFACE -j $chain
+		ip6tables -D FORWARD -m physdev --physdev-out $INTERFACE -j $chain -m comment --comment "snf-network_firewall"
   done
 
 }
@@ -111,7 +117,7 @@ function routed_setup_ipv4 {
   fi
 
 	# mangle ARPs to come from the gw's IP
-	arptables -A OUTPUT -o $INTERFACE --opcode request -j mangle --mangle-ip-s    "$NETWORK_GATEWAY"
+	arptables -A OUTPUT -o $INTERFACE --opcode request -j mangle --mangle-ip-s "$NETWORK_GATEWAY" -m comment --comment "snf-network_proxy-arp"
 
 	# route interface to the proper routing table
 	ip rule add dev $INTERFACE table $TABLE
@@ -183,8 +189,8 @@ function routed_setup_firewall {
 	done
 
 	if [ "x$chain" != "x" ]; then
-		iptables  -A FORWARD -o $INTERFACE -j $chain
-		ip6tables -A FORWARD -o $INTERFACE -j $chain
+		iptables  -A FORWARD -o $INTERFACE -j $chain -m comment --comment "snf-network_firewall"
+		ip6tables -A FORWARD -o $INTERFACE -j $chain -m comment --comment "snf-network_firewall"
 	fi
 }
 
@@ -212,8 +218,8 @@ function bridged_setup_firewall {
 	done
 
 	if [ "x$chain" != "x" ]; then
-		iptables  -I FORWARD -m physdev --physdev-out $INTERFACE -j $chain
-		ip6tables -I FORWARD -m physdev --physdev-out $INTERFACE -j $chain
+		iptables  -I FORWARD -m physdev --physdev-out $INTERFACE -j $chain -m comment --comment "snf-network_firewall"
+		ip6tables -I FORWARD -m physdev --physdev-out $INTERFACE -j $chain -m comment --comment "snf-network_firewall"
 	fi
 }
 function init_ebtables {
