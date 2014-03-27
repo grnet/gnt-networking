@@ -41,29 +41,12 @@ source /usr/lib/snf-network/common.sh
 
 $SNF_NETWORK_LOG $0 "Cleanup $INTERFACE of $INSTANCE"
 get_info
-
-if [ "$MODE" = "routed" ]; then
-  :;
-elif [ "$MODE" = "bridged" ]; then
-  brctl delif $BRIDGE $INTERFACE
-  try clear_bridged_setup_firewall
-fi
-
-
-for tag in $NETWORK_TAGS; do
-  case $tag in
-  $IP_LESS_ROUTED_TAG)
-    try clear_routed_setup_ipv4
-    try clear_routed_setup_ipv6
-    try clear_routed_setup_firewall
-  ;;
-  $NFDHCPD_TAG)
-    try clear_nfdhcpd
-  ;;
-  $MAC_FILTERED_TAG)
-    try clear_ebtables
-  ;;
-  esac
-done
+try clear_bridged_setup_firewall
+try clear_routed_setup_ipv4
+try clear_routed_setup_ipv6
+try clear_routed_setup_firewall
+try delete_neighbor_proxy
+try clear_nfdhcpd
+try clear_ebtables
 
 exit 0
