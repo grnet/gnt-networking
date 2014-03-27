@@ -36,6 +36,26 @@
 source /etc/default/snf-network
 source /usr/lib/snf-network/common.sh
 
+function fix_proxy_ndp() {
+
+  # We invoke get_info only if needed in order not to log
+  # and calculate things that are not needed eventually
+  if [ "$GANETI_OLD_PRIMARY" == "$hostname" ]; then
+    # This runs on the source node
+    $SNF_NETWORK_LOG $0 "Fixing proxy ndp in old primary."
+    get_info
+    delete_neighbor_proxy
+  elif [ "$GANETI_NEW_PRIMARY" == "$hostname" ]; then
+    $SNF_NETWORK_LOG $0 "Do nothing in new primary. All done by if-up script"
+  elif [ "$GANETI_INSTANCE_PRIMARY" == "$hostname" ]; then
+    # This runs on the primary node of instance
+    $SNF_NETWORK_LOG $0 "Fixing proxy ndp in primary node."
+    get_info
+    delete_neighbor_proxy
+  fi
+
+}
+
 hostname=$(hostname -f)
 
 INSTANCE=$GANETI_INSTANCE_NAME
@@ -61,15 +81,17 @@ for idx in $(seq $FIRST $LAST); do
   for tag in $NETWORK_TAGS; do
     case $tag in
     $IP_LESS_ROUTED_TAG)
-      if [ "$GANETI_OLD_PRIMARY" == "$hostname" ]; then
-        # This runs on the source node
-        # We invoke get_info here in order not to log
-        # and calculate things that are not needed eventually
-        get_info
-        delete_neighbor_proxy
-      elif [ "$GANETI_NEW_PRIMARY" == "$hostname" ]; then
-        $SNF_NETWORK_LOG $0 "Do nothing in new primary. All done by if-up script"
+      $SNF_NETWORK_LOG $0 "Fixing $INSTANCE.."
+      if [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_MIGRATE" ]; then
+        fix_proxy_ndp
+      elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_FAILOVER" ]; then
+        fix_proxy_ndp
+      elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_SHUTDOWN" ]; then
+        fix_proxy_ndp
+      elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_REMOVE" ]; then
+        fix_proxy_ndp
       fi
+
     ;;
     esac
   done
