@@ -59,7 +59,7 @@ function clear_routed_setup_ipv6 {
 
 function delete_neighbor_proxy {
 
-  if [ -z "$EUI64" -z -o "$UPLINK6" ]; then
+  if [ -z "$EUI64" -o -z "$UPLINK6" ]; then
     return
   fi
 
