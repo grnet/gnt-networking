@@ -82,10 +82,10 @@ function clear_routed_setup_firewall {
 function clear_bridged_setup_firewall {
 
   for oldchain in protected unprotected limited; do
-		iptables  -D FORWARD -m physdev --physdev-out $INTERFACE -j $chain
-		iptables  -D FORWARD -m physdev --physdev-out $INTERFACE -j $chain -m comment --comment "snf-network_firewall"
-		ip6tables -D FORWARD -m physdev --physdev-out $INTERFACE -j $chain
-		ip6tables -D FORWARD -m physdev --physdev-out $INTERFACE -j $chain -m comment --comment "snf-network_firewall"
+		iptables  -D FORWARD -m physdev --physdev-out $INTERFACE -j $oldchain
+		iptables  -D FORWARD -m physdev --physdev-out $INTERFACE -j $oldchain -m comment --comment "snf-network_firewall"
+		ip6tables -D FORWARD -m physdev --physdev-out $INTERFACE -j $oldchain
+		ip6tables -D FORWARD -m physdev --physdev-out $INTERFACE -j $oldchain -m comment --comment "snf-network_firewall"
   done
 
 }
