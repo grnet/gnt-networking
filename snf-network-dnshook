@@ -77,10 +77,8 @@ update_dns () {
 
 # Main starts here
 
-host=$(hostname)
-domain=$(hostname -d)
-
 INSTANCE=$GANETI_INSTANCE_NAME
+hostname=$(hostname -f)
 
 # Exit if we do not have instance name.
 # It should be exported to hooks for instance related opcodes.
@@ -89,7 +87,7 @@ if [ -z "$INSTANCE" ]; then
 fi
 
 # Run only in primary node of instance
-if [ "$GANETI_INSTANCE_PRIMARY" != "$host.$domain" ]; then
+if [ "$GANETI_INSTANCE_PRIMARY" != "$hostname" ]; then
   exit 0
 fi
 
