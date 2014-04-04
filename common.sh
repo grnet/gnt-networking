@@ -43,13 +43,13 @@ function try {
 
 function clear_log {
 
-  rm -f /var/lib/snf-network/$INTERFACE
+  rm -f $STATE_DIR/$INTERFACE
 
 }
 
 function init_log {
 
-    cat > /var/lib/snf-network/$INTERFACE <<EOF
+    cat > $STATE_DIR/$INTERFACE <<EOF
 INSTANCE=$INSTANCE
 IP=$IP
 EUI64=$EUI64
@@ -64,7 +64,7 @@ EOF
 
 function log {
 
-  echo $@ >> /var/lib/snf-network/$INTERFACE
+  echo $@ >> $STATE_DIR/$INTERFACE
 
 }
 

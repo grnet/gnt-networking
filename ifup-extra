@@ -96,11 +96,10 @@ function setup_extra () {
 
 function save_all_tables () {
 
-  mkdir -p /etc/iptables
-  date > /etc/iptables/date
-  iptables-save > /etc/iptables/snf-network.v4
-  ip6tables-save > /etc/iptables/snf-network.v6
-  arptables-save > /etc/iptables/snf-network.arp
+  date > $STATE_DIR/date
+  iptables-save > $STATE_DIR/snf-network.v4
+  ip6tables-save > $STATE_DIR/snf-network.v6
+  arptables-save > $STATE_DIR/snf-network.arp
 
 }
 
