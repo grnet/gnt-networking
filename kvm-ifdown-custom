@@ -48,5 +48,6 @@ try clear_routed_setup_firewall
 try delete_neighbor_proxy
 try clear_nfdhcpd
 try clear_ebtables
+try clear_log
 
 exit 0

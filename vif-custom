@@ -59,6 +59,9 @@ try clear_routed_setup_firewall
 try clear_bridged_setup_firewall
 try clear_ebtables
 try clear_nfdhcpd
+try clear_log
+
+init_log
 
 if [ "$MODE" = "routed" ]; then
   ip link set $INTERFACE up
