@@ -65,6 +65,7 @@ EOF
 function log {
 
   echo $@ >> $STATE_DIR/$INTERFACE
+  $@
 
 }
 
