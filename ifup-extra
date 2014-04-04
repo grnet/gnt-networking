@@ -104,11 +104,7 @@ function save_all_tables () {
 
 }
 
-try clean_extra
-
-setup_extra
-
-save_all_tables
+# This is an example file. Actually it does nothing.
+# Please see the instructions above before adding any logic here.
 
 exit 0
-
