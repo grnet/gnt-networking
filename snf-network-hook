@@ -42,14 +42,14 @@ function fix_proxy_ndp() {
   # and calculate things that are not needed eventually
   if [ "$GANETI_OLD_PRIMARY" == "$hostname" ]; then
     # This runs on the source node
-    $SNF_NETWORK_LOG $0 "Fixing proxy ndp in old primary."
+    log "Fixing proxy ndp in old primary."
     get_info
     delete_neighbor_proxy
   elif [ "$GANETI_NEW_PRIMARY" == "$hostname" ]; then
-    $SNF_NETWORK_LOG $0 "Do nothing in new primary. All done by if-up script"
+    log "Do nothing in new primary. All done by if-up script"
   elif [ "$GANETI_INSTANCE_PRIMARY" == "$hostname" ]; then
     # This runs on the primary node of instance
-    $SNF_NETWORK_LOG $0 "Fixing proxy ndp in primary node."
+    log "Fixing proxy ndp in primary node."
     get_info
     delete_neighbor_proxy
   fi
@@ -81,7 +81,7 @@ for idx in $(seq $FIRST $LAST); do
   for tag in $NETWORK_TAGS; do
     case $tag in
     $IP_LESS_ROUTED_TAG)
-      $SNF_NETWORK_LOG $0 "Fixing $INSTANCE.."
+      log "Fixing $INSTANCE.."
       if [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_MIGRATE" ]; then
         fix_proxy_ndp
       elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_FAILOVER" ]; then

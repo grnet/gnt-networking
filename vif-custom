@@ -50,7 +50,7 @@ source $GANETI_NIC_DIR/$domname/$devid
 INTERFACE=$dev
 INSTANCE=$domname
 
-$SNF_NETWORK_LOG $0 "Configure $INTERFACE of $INSTANCE"
+log "Configure $INTERFACE of $INSTANCE"
 get_info
 
 try clear_routed_setup_ipv4
@@ -59,9 +59,9 @@ try clear_routed_setup_firewall
 try clear_bridged_setup_firewall
 try clear_ebtables
 try clear_nfdhcpd
-try clear_log
+try clear_save
 
-init_log
+init_save
 
 if [ "$MODE" = "routed" ]; then
   ip link set $INTERFACE up

@@ -38,6 +38,7 @@
 # Usage: caller msg
 
 source /etc/default/snf-network
+source /usr/lib/snf-network/common.sh
 
 caller=$(basename $1)
 

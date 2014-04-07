@@ -35,19 +35,23 @@
 
 source /etc/default/snf-network
 
+: ${STATE_DIR:=/var/lib/snf-network}
+: ${LOGFILE:=/var/log/ganeti/snf-network.log}
+: ${IFUP_EXTRA_SCRIPT:=/etc/ganeti/ifup-extra}
+
 function try {
 
   $1 &>/dev/null || true
 
 }
 
-function clear_log {
+function clear_save {
 
   rm -f $STATE_DIR/$INTERFACE
 
 }
 
-function init_log {
+function init_save {
 
     cat > $STATE_DIR/$INTERFACE <<EOF
 INSTANCE=$INSTANCE
@@ -62,10 +66,17 @@ EOF
 
 }
 
-function log {
+function save {
 
   echo $@ >> $STATE_DIR/$INTERFACE
   $@
+
+}
+
+
+function log {
+
+  snf-network-log "$0" "$@"
 
 }
 
@@ -91,7 +102,7 @@ function delete_neighbor_proxy {
     return
   fi
 
-  $SNF_NETWORK_LOG $0 "ip -6 neigh del proxy $EUI64 dev $UPLINK6"
+  log "ip -6 neigh del proxy $EUI64 dev $UPLINK6"
   ip -6 neigh del proxy $EUI64 dev $UPLINK6
 
 }
@@ -145,7 +156,7 @@ function routed_setup_ipv4 {
   fi
 
 	# mangle ARPs to come from the gw's IP
-	log arptables -A OUTPUT -o $INTERFACE --opcode request -j mangle --mangle-ip-s "$NETWORK_GATEWAY" -m comment --comment "snf-network_proxy-arp"
+	save arptables -A OUTPUT -o $INTERFACE --opcode request -j mangle --mangle-ip-s "$NETWORK_GATEWAY" -m comment --comment "snf-network_proxy-arp"
 
 	# route interface to the proper routing table
 	ip rule add dev $INTERFACE table $TABLE
@@ -166,7 +177,7 @@ function send_garp {
 
   # Send GARP from host to upstream router
   echo 1 > /proc/sys/net/ipv4/ip_nonlocal_bind
-  $SNF_NETWORK_LOG $0 "arpsend -U -i $IP -c1 $UPLINK"
+  log "arpsend -U -i $IP -c1 $UPLINK"
   arpsend -U -i $IP -c1 $UPLINK
   echo 0 > /proc/sys/net/ipv4/ip_nonlocal_bind
 
@@ -188,7 +199,7 @@ function routed_setup_ipv6 {
 	echo 0 > /proc/sys/net/ipv6/conf/$INTERFACE/proxy_ndp
 
   # Send Unsolicited Neighbor Advertisement
-  $SNF_NETWORK_LOG $0 "ndsend $EUI64 $UPLINK6"
+  log "ndsend $EUI64 $UPLINK6"
   ndsend $EUI64 $UPLINK6
 
 }
@@ -217,8 +228,8 @@ function routed_setup_firewall {
 	done
 
 	if [ "x$chain" != "x" ]; then
-		log iptables  -A FORWARD -o $INTERFACE -j $chain -m comment --comment "snf-network_firewall"
-		log ip6tables -A FORWARD -o $INTERFACE -j $chain -m comment --comment "snf-network_firewall"
+		save iptables  -A FORWARD -o $INTERFACE -j $chain -m comment --comment "snf-network_firewall"
+		save ip6tables -A FORWARD -o $INTERFACE -j $chain -m comment --comment "snf-network_firewall"
 	fi
 }
 
@@ -246,21 +257,21 @@ function bridged_setup_firewall {
 	done
 
 	if [ "x$chain" != "x" ]; then
-		log iptables  -I FORWARD -m physdev --physdev-out $INTERFACE -j $chain -m comment --comment "snf-network_firewall"
-		log ip6tables -I FORWARD -m physdev --physdev-out $INTERFACE -j $chain -m comment --comment "snf-network_firewall"
+		save iptables  -I FORWARD -m physdev --physdev-out $INTERFACE -j $chain -m comment --comment "snf-network_firewall"
+		save ip6tables -I FORWARD -m physdev --physdev-out $INTERFACE -j $chain -m comment --comment "snf-network_firewall"
 	fi
 }
 function init_ebtables {
 
-  log runlocked $RUNLOCKED_OPTS ebtables -N $FROM -P RETURN
-  log runlocked $RUNLOCKED_OPTS ebtables -A FORWARD -i $INTERFACE -j $FROM
+  save runlocked $RUNLOCKED_OPTS ebtables -N $FROM -P RETURN
+  save runlocked $RUNLOCKED_OPTS ebtables -A FORWARD -i $INTERFACE -j $FROM
   # This is needed for multicast packets
-  log runlocked $RUNLOCKED_OPTS ebtables -A INPUT -i $INTERFACE -j $FROM
+  save runlocked $RUNLOCKED_OPTS ebtables -A INPUT -i $INTERFACE -j $FROM
 
-  log runlocked $RUNLOCKED_OPTS ebtables -N $TO -P RETURN
-  log runlocked $RUNLOCKED_OPTS ebtables -A FORWARD -o $INTERFACE -j $TO
+  save runlocked $RUNLOCKED_OPTS ebtables -N $TO -P RETURN
+  save runlocked $RUNLOCKED_OPTS ebtables -A FORWARD -o $INTERFACE -j $TO
   # This is needed for multicast packets
-  log runlocked $RUNLOCKED_OPTS ebtables -A OUTPUT -o $INTERFACE -j $TO
+  save runlocked $RUNLOCKED_OPTS ebtables -A OUTPUT -o $INTERFACE -j $TO
 
 }
 
@@ -271,14 +282,14 @@ function setup_ebtables {
   if [ -n "$IP" ]; then
     :; # runlocked $RUNLOCKED_OPTS ebtables -A $FROM --ip-source \! $IP -p ipv4 -j DROP
   fi
-  log runlocked $RUNLOCKED_OPTS ebtables -A $FROM -s \! $MAC -j DROP
+  save runlocked $RUNLOCKED_OPTS ebtables -A $FROM -s \! $MAC -j DROP
   # accept dhcp responses from host (nfdhcpd)
   # this is actually not needed because nfdhcpd opens a socket and binds is with
   # tap interface so dhcp response does not go through bridge
   # INDEV_MAC=$(cat /sys/class/net/$INDEV/address)
   # runlocked $RUNLOCKED_OPTS ebtables -A $TO -s $INDEV_MAC -p ipv4 --ip-protocol=udp  --ip-destination-port=68 -j ACCEPT
   # allow only packets from the same mac prefix
-  log runlocked $RUNLOCKED_OPTS ebtables -A $TO -s \! $MAC/$MAC_MASK -j DROP
+  save runlocked $RUNLOCKED_OPTS ebtables -A $TO -s \! $MAC/$MAC_MASK -j DROP
 }
 
 function setup_masq {
@@ -318,7 +329,7 @@ function get_uplink {
   UPLINK=$(ip route list table $table | grep "default via" | awk '{print $5}')
   UPLINK6=$(ip -6 route list table $table | grep "default via" | awk '{print $5}')
   if [ -n "$UPLINK" -o -n "$UPLINK6" ]; then
-    $SNF_NETWORK_LOG $0 "* uplink($table) -> $UPLINK, $UPLINK6"
+    log "* uplink($table) -> $UPLINK, $UPLINK6"
   fi
 
 }
@@ -336,7 +347,7 @@ get_eui64 () {
     EUI64=
   else
     EUI64=$($MAC2EUI64 $mac $prefix)
-    $SNF_NETWORK_LOG $0 "* eui64($mac, $prefix) -> $EUI64"
+    log "* eui64($mac, $prefix) -> $EUI64"
   fi
 
 }
@@ -349,7 +360,7 @@ get_eui64 () {
 send_command () {
 
   local command="$1"
-  $SNF_NETWORK_LOG $0 "* $command"
+  log "* $command"
   nsupdate -k $KEYFILE > /dev/null << EOF
   server $SERVER
   $command
@@ -408,7 +419,7 @@ update_ptr6record () {
 update_all () {
 
   local action=$1
-  $SNF_NETWORK_LOG $0 "Update ($action) dns for $INSTANCE $IP $EUI64"
+  log "Update ($action) dns for $INSTANCE $IP $EUI64"
   update_arecord $action
   update_aaaarecord $action
   update_ptrrecord $action
@@ -433,7 +444,7 @@ get_rev6_info () {
     R6REC=$(host $eui64 | egrep -o '([[:alnum:]]\.){32}ip6.arpa' )
     R6ZONE=$(echo $R6REC | awk -F. 'BEGIN{rpart="";} { for (i=32;i>16;i=i-1) rpart=$i "." rpart; } END{print rpart "ip6.arpa";}')
     R6LPART=$(echo $R6REC | awk -F. 'BEGIN{lpart="";} { for (i=16;i>0;i=i-1) lpart=$i "." lpart; } END{print lpart;}')
-    $SNF_NETWORK_LOG $0 "* rev6($eui64) -> $R6LPART, $R6ZONE"
+    log "* rev6($eui64) -> $R6LPART, $R6ZONE"
   fi
 
 }
@@ -457,7 +468,7 @@ get_rev4_info () {
     IFS=$OLDIFS
     RZONE="$c.$b.$a.in-addr.arpa"
     RLPART="$d"
-    $SNF_NETWORK_LOG $0 "* rev4($ip) -> $RLPART, $RZONE"
+    log "* rev4($ip) -> $RLPART, $RZONE"
   fi
 
 }
@@ -467,7 +478,7 @@ get_ebtables_chains () {
   local iface=$1
   FROM=FROM${iface^^}
   TO=TO${iface^^}
-  # $SNF_NETWORK_LOG $0 "* ebtables($iface) -> $FROM, $TO"
+  # log "* ebtables($iface) -> $FROM, $TO"
 
 }
 
@@ -486,7 +497,7 @@ get_mode_info () {
     TABLE=
     INDEV=$link
   fi
-  $SNF_NETWORK_LOG $0 "* $mode @ $link ($INDEV)"
+  log "* $mode @ $link ($INDEV)"
 
 }
 
@@ -515,12 +526,12 @@ function get_info () {
 # www.google.com has IPv6 address 2a00:1450:4001:80b::1012
 query_dns () {
 
-  $SNF_NETWORK_LOG $0 "Query dns for $INSTANCE"
+  log "Query dns for $INSTANCE"
   HOSTQ="host -s -R 3 -W 3"
   HOST_IP_ALL=$($HOSTQ $INSTANCE.$FZONE $SERVER | sed -n 's/.*has address //p')
   HOST_IP6_ALL=$($HOSTQ $INSTANCE.$FZONE $SERVER | sed -n 's/.*has IPv6 address //p')
-  $SNF_NETWORK_LOG $0 "* ip($INSTANCE) -> $HOST_IP_ALL"
-  $SNF_NETWORK_LOG $0 "* ip6($INSTANCE) -> $HOST_IP6_ALL"
+  log "* ip($INSTANCE) -> $HOST_IP_ALL"
+  log "* ip6($INSTANCE) -> $HOST_IP6_ALL"
 
 }
 
@@ -530,7 +541,7 @@ query_dns () {
 reset_dns () {
 
   # This should remove the A, AAAA, CNAME entries
-  $SNF_NETWORK_LOG $0 "Reset dns for $INSTANCE"
+  log "Reset dns for $INSTANCE"
   send_command "update delete $INSTANCE.$FZONE"
   for ip in $HOST_IP_ALL; do
     get_rev4_info $ip
