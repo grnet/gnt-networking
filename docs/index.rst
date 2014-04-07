@@ -10,7 +10,7 @@ snf-network is a set of scripts that handles the network configuration
 of an instance inside a Ganeti cluster. It takes advantage of the
 variables that Ganeti exports to its execution environment and issues
 all the necessary commands to ensure network connectivity to the
-instance based on the requested setup (described later).
+instance based on the requested setup (see :ref:`below <setups>`).
 
 
 Ganeti Mechanism
@@ -142,6 +142,7 @@ on NIC's mode, network's and instance's tags issues various rules
 (brctl, ip, iptables, etc.). Finally if executes the :ref:`extra
 <extra>` script if found.
 
+.. _vif-custom:
 
 vif-custom (Xen's kvm-ifup-custom)
 """"""""""""""""""""""""""""""""""
@@ -238,9 +239,15 @@ Supported Setups
 Currently, since NICs in Ganeti are not taggable objects, we use the
 network's tags to customize each NIC configuration. If a NIC resides
 inside a network, its tags are inherited and exported as the
-NETWORK_TAGS environment variable.  In the following subsections we will
-mention all supported tags and their reflected underline setup.
+NETWORK_TAGS environment variable. In the following subsections we will
+mention all supported tags and their reflected underline setup. To
+add a tag to a network run:
 
+.. code-block:: console
+
+  gnt-network add-tags <network-name> <tag1> <tag2> ...
+
+Besides that, please see :ref:`here <configure>` how setup snf-network.
 
 ip-less-routed
 ^^^^^^^^^^^^^^
@@ -253,13 +260,13 @@ This setup has the following characteristics:
 * The node itself does not have an IP inside the routed network.
 * The node does proxy ARP for IPv4 networks.
 * The node does proxy NDP for IPv6 networks while RA and NA are
-  served locally by `nfdhcpd
-  <http://www.synnefo.org/docs/nfdhcpd/latest/index.html>`_ since the
-  VMs are not on the same link with the router.
+  served locally by `nfdhcpd`_ since the VMs are not on the same link
+  with the router.
 
 Please see :ref:`here <routed-conf>` on how to configure it, and
 :ref:`here <routed-traffic>` how it actually works.
 
+.. _nfdhpcd: http://www.synnefo.org/docs/nfdhcpd/latest/index.html
 
 mac-filtered
 ^^^^^^^^^^^^
@@ -290,6 +297,8 @@ network should be guaranteed by the end-user or some other external
 component on the upper layers (e.g., Synnefo).
 
 
+.. _dns:
+
 dns
 ^^^
 
@@ -299,16 +308,16 @@ found, `snf-network-dnshook` will use `nsupdate` and add/remove entries
 related to the interface that is being managed. To enable it the admin
 must set the SERVER (the IP of the DNS server), FZONE (the domain of the
 instances), KEYFILE (the .private file created by dnssec-keygen)
-variables found in `/etc/default/snf-network`.
+variables found in `/etc/default/snf-network`. Please note that
+currenlty only one domain is supported for the instances.
 
 
 nfdhcpd
 ^^^^^^^
 
 snf-network creates binding files with all info required under
-`/var/lib/nfdhcpd/` directory so that `nfdhcpd
-<http://www.synnefo.org/docs/nfdhcpd/latest/index.html>`_ can reply
-to DHCP, NS, RS, DHCPv6 and thus instances get properly configured.
+`/var/lib/nfdhcpd/` directory so that `nfdhcpd`_ can reply to DHCP, NS,
+RS, DHCPv6 and thus instances get properly configured.
 
 
 Firewall
@@ -359,3 +368,43 @@ thus we need physdev module of iptables:
 .. code-block:: console
 
   # iptables -t filter -I FORWARD -m physdev --physdev-out $INTERFACE -j $chain
+
+
+.. _configure:
+
+
+Configure
+---------
+
+`snf-network` exports a set of configuration variables to the admin in
+`/etc/default/snf-network`. In this section we explain how to use each
+one of them.
+
+ - ``STATE_DIR`` dir to backup each interface's configuration
+ - ``LOGFILE`` path to file used to log snf-network related actions
+ - ``IFUP_EXTRA_SCRIPT`` path to extra script provided by the admin for
+   added/custom functionality (see :ref:`here <extra>`)
+ - ``MAC_MASK`` applied to MAC in order to get the MAC prefix that
+   guarantees L2 isolation (see :ref:`here <ebtables>`)
+ - ``TAP_CONSTANT_MAC`` is the MAC that all routed TAPs will obtain
+ - ``MAC2EUI64`` is an external script for converting a MAC to EUI64
+   based on an IPv6 prefix
+ - ``NFDHCPD_STATE_DIR`` the path to store binding files for nfdhcpd
+   (see `nfdhcpd`_)
+ - ``GANETI_NIC_DIR`` dir to find NIC information in case of Xen (see
+   :ref:`here <vif-custom>`)
+ - ``*_TAG`` network tags related to supported setups (see :ref:`here
+   <setups>`)
+ - ``RUNLOCKED_OPTS`` options for runlocked helper script used as a
+   wrapper for ebtables
+ - ``SERVER`` the IP/FQDN of the name server
+ - ``FZONE`` the domain that the VMs will reside in
+ - ``KEYFILE`` path to file used with -k option of nsupdate
+ - ``TTL`` defines the duration in seconds that a DNS record may be cached
+
+
+.. toctree::
+  :hidden:
+
+  routed
+  ebtables
