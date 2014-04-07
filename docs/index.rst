@@ -266,7 +266,7 @@ This setup has the following characteristics:
 Please see :ref:`here <routed-conf>` on how to configure it, and
 :ref:`here <routed-traffic>` how it actually works.
 
-.. _nfdhpcd: http://www.synnefo.org/docs/nfdhcpd/latest/index.html
+.. _nfdhcpd: http://www.synnefo.org/docs/nfdhcpd/latest/index.html
 
 mac-filtered
 ^^^^^^^^^^^^
