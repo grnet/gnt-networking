@@ -105,7 +105,7 @@ function delete_neighbor_proxy {
     return
   fi
 
-  log "ip -6 neigh del proxy $EUI64 dev $UPLINK6"
+  log "* Deleting Neighbor Proxy for $EUI64 on $UPLINK6"
   ip -6 neigh del proxy $EUI64 dev $UPLINK6
 
 }
@@ -183,7 +183,7 @@ function send_garp {
 
   # Send GARP from host to upstream router
   echo 1 > /proc/sys/net/ipv4/ip_nonlocal_bind
-  log "arpsend -U -i $IP -c1 $UPLINK"
+  log "* Sending GARP for $IP on $UPLINK"
   save arpsend -U -i $IP -c1 $UPLINK
   echo 0 > /proc/sys/net/ipv4/ip_nonlocal_bind
 
@@ -207,7 +207,7 @@ function routed_setup_ipv6 {
 
   save ip6tables -A FORWARD -i $INTERFACE ! -s $EUI64 -j DROP -m comment --comment "snf-network_routed"
   # Send Unsolicited Neighbor Advertisement
-  log "ndsend $EUI64 $UPLINK6"
+  log "* Sending Unsolicited NA for $EUI64 on $UPLINK6"
   save ndsend $EUI64 $UPLINK6
 
 }
@@ -336,8 +336,11 @@ function get_uplink {
   local table=$1
   UPLINK=$(ip route list table $table | grep "default via" | awk '{print $5}')
   UPLINK6=$(ip -6 route list table $table | grep "default via" | awk '{print $5}')
-  if [ -n "$UPLINK" -o -n "$UPLINK6" ]; then
-    log "* uplink($table) -> $UPLINK, $UPLINK6"
+  if [ -n "$UPLINK" ]; then
+    log "* uplink($table) -> $UPLINK"
+  fi
+  if [ -n "$UPLINK6" ]; then
+    log "* uplink6($table) -> $UPLINK6"
   fi
 
 }
@@ -505,7 +508,7 @@ get_mode_info () {
     TABLE=
     INDEV=$link
   fi
-  log "* $mode @ $link ($INDEV)"
+  log "* $iface: $mode @ $link"
 
 }
 
