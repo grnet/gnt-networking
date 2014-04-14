@@ -86,12 +86,16 @@ function clear_routed_setup_ipv4 {
  while ip rule del dev $INTERFACE; do :; done
  # This is needed for older snf-network versions
  iptables -D FORWARD -i $INTERFACE -p udp --dport 67 -j DROP
+ # This is needed because we do not know the IP of the stale rule.
+ # Additionally we cannot refer to line numbers due to possible race.
+ iptables -t filter -S FORWARD | grep -w $INTERFACE | sed -e 's/-A/-D/' | xargs -L1 iptables
 
 }
 
 function clear_routed_setup_ipv6 {
 
  while ip -6 rule del dev $INTERFACE; do :; done
+ ip6tables -t filter -S FORWARD | grep -w $INTERFACE | sed -e 's/-A/-D/' | xargs -L1 ip6tables
 
 }
 
@@ -163,6 +167,9 @@ function routed_setup_ipv4 {
 	# static route mapping IP -> INTERFACE
 	ip route replace $IP proto static dev $INTERFACE table $TABLE
 
+  # Do not allow packets with different source IP
+  save iptables -A FORWARD -i $INTERFACE ! -s $IP -j DROP -m comment --comment "snf-network_routed"
+
 	# Enable proxy ARP
 	echo 1 > /proc/sys/net/ipv4/conf/$INTERFACE/proxy_arp
 
@@ -197,6 +204,8 @@ function routed_setup_ipv6 {
 	# this should be the default, but better safe than sorry
 	echo 0 > /proc/sys/net/ipv6/conf/$INTERFACE/proxy_ndp
 
+
+  save ip6tables -A FORWARD -i $INTERFACE ! -s $EUI64 -j DROP -m comment --comment "snf-network_routed"
   # Send Unsolicited Neighbor Advertisement
   log "ndsend $EUI64 $UPLINK6"
   ndsend $EUI64 $UPLINK6
