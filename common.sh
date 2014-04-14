@@ -37,7 +37,7 @@ source /etc/default/snf-network
 
 : ${STATE_DIR:=/var/lib/snf-network}
 : ${LOGFILE:=/var/log/ganeti/snf-network.log}
-: ${IFUP_EXTRA_SCRIPT:=/etc/ganeti/ifup-extra}
+
 
 function try {
 
