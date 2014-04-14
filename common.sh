@@ -162,10 +162,10 @@ function routed_setup_ipv4 {
 	save arptables -A OUTPUT -o $INTERFACE --opcode request -j mangle --mangle-ip-s "$NETWORK_GATEWAY"
 
 	# route interface to the proper routing table
-	ip rule add dev $INTERFACE table $TABLE
+	save ip rule add dev $INTERFACE table $TABLE
 
 	# static route mapping IP -> INTERFACE
-	ip route replace $IP proto static dev $INTERFACE table $TABLE
+	save ip route replace $IP proto static dev $INTERFACE table $TABLE
 
   # Do not allow packets with different source IP
   save iptables -A FORWARD -i $INTERFACE ! -s $IP -j DROP -m comment --comment "snf-network_routed"
@@ -184,7 +184,7 @@ function send_garp {
   # Send GARP from host to upstream router
   echo 1 > /proc/sys/net/ipv4/ip_nonlocal_bind
   log "arpsend -U -i $IP -c1 $UPLINK"
-  arpsend -U -i $IP -c1 $UPLINK
+  save arpsend -U -i $IP -c1 $UPLINK
   echo 0 > /proc/sys/net/ipv4/ip_nonlocal_bind
 
 }
@@ -196,9 +196,9 @@ function routed_setup_ipv6 {
     return
   fi
 	# Add a routing entry for the eui-64
-	ip -6 rule add dev $INTERFACE table $TABLE
-	ip -6 ro replace $EUI64/128 dev $INTERFACE table $TABLE
-	ip -6 neigh add proxy $EUI64 dev $UPLINK6
+	save ip -6 rule add dev $INTERFACE table $TABLE
+	save ip -6 ro replace $EUI64/128 dev $INTERFACE table $TABLE
+	save ip -6 neigh add proxy $EUI64 dev $UPLINK6
 
 	# disable proxy NDP since we're handling this on userspace
 	# this should be the default, but better safe than sorry
@@ -208,7 +208,7 @@ function routed_setup_ipv6 {
   save ip6tables -A FORWARD -i $INTERFACE ! -s $EUI64 -j DROP -m comment --comment "snf-network_routed"
   # Send Unsolicited Neighbor Advertisement
   log "ndsend $EUI64 $UPLINK6"
-  ndsend $EUI64 $UPLINK6
+  save ndsend $EUI64 $UPLINK6
 
 }
 
