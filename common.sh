@@ -83,7 +83,6 @@ function log {
 function clear_routed_setup_ipv4 {
 
  arptables -D OUTPUT -o $INTERFACE --opcode request -j mangle
- arptables -D OUTPUT -o $INTERFACE --opcode request -j mangle -m comment --comment "snf-network_proxy-arp"
  while ip rule del dev $INTERFACE; do :; done
  # This is needed for older snf-network versions
  iptables -D FORWARD -i $INTERFACE -p udp --dport 67 -j DROP
@@ -156,7 +155,7 @@ function routed_setup_ipv4 {
   fi
 
 	# mangle ARPs to come from the gw's IP
-	save arptables -A OUTPUT -o $INTERFACE --opcode request -j mangle --mangle-ip-s "$NETWORK_GATEWAY" -m comment --comment "snf-network_proxy-arp"
+	save arptables -A OUTPUT -o $INTERFACE --opcode request -j mangle --mangle-ip-s "$NETWORK_GATEWAY"
 
 	# route interface to the proper routing table
 	ip rule add dev $INTERFACE table $TABLE
