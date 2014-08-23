@@ -45,10 +45,27 @@ FZONE=""
 KEYFILE=""
 MAC2EUI64="/usr/bin/mac2eui64"
 
+# kerberos authentication settings
+# Will be used with kstart and ktutil
+KERBEROS_PRINCIPAL=
+KERBEROS_KEYTAB=/etc/krb5.keytab
+KERBEROS_KSTART_ARGS="-H 1 -l 1h"
+KERBEROS_TICKET=/var/lib/snf-network/snf-network-kerberos.tkt
+
 source /etc/default/snf-network
 source /usr/lib/snf-network/common.sh
 
-if [ -z "$SERVER" -o -z "$FZONE" -o ! -e "$KEYFILE" ]; then
+if [ -z "$SERVER" -o -z "$FZONE" ]; then
+  log "SERVER and FZONE not defined! Aborting.."
+  exit 0
+fi
+
+if [ -e "$KEYFILE" ]; then
+  log "Will use $KEYFILE keyfile for nsupdate."
+elif [ -n "$KERBEROS_PRINCIPAL" ]; then
+  log "Will use $KERBEROS_PRINCIPAL kerberos principal for nsupdate."
+else
+  log "Neither KEYFILE nor KERBEROS_PRINCIPAL defined! Aborting.."
   exit 0
 fi
 

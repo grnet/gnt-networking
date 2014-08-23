@@ -372,7 +372,13 @@ send_command () {
 
   local command="$1"
   log "* $command"
-  nsupdate -k $KEYFILE > /dev/null << EOF
+  if [ -e "$KEYFILE" ]; then
+    nsupdate_command="nsupdate -k $KEYFILE"
+  elif [ -n "$KERBEROS_PRINCIPAL" ]; then
+    nsupdate_command="KR5BCCNAME=$KERBEROS_TICKET nsupdate -g"
+    k5start -k $KERBEROS_TICKET -u $KERBEROS_PRINCIPAL -f $KERBEROS_KEYTAB $KERBEROS_KSTART_ARGS
+  fi
+  $nsupdate_command > /dev/null << EOF
   server $SERVER
   $command
   send
