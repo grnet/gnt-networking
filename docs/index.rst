@@ -224,7 +224,29 @@ Installed under `instance-stop-post.d`, `instance-rename-post.d` and
 `instance-remove-post.d` hook dirs.
 
 This hook updates an external `DDNS <https://wiki.debian.org/DDNS>`_
-setup via ``nsupdate``. Since we add/remove entries during ifup/ifdown
+setup via ``nsupdate``. To do so, the path to a valid keyfile, along
+with the nameserver must be added in settings
+(/etc/default/snf-network).
+
+To authenticate against an AD controller using Kerberos, snf-network uses
+the -g option of nsupdate (GSS-TSIG mode). Prior to that it uses "k5start
+-H" to ensure there is a happy ticket (stored under /var/lib/snf-network;
+see KERBEROS_TICKET default option), otherwise use a keytab containing
+the password to obtain a ticket automatically (password-less). The
+keytab with the corresponding service principal must already exist and
+both should be mentioned in the settings.
+
+To add a valid keytab one can use:
+
+.. code-block:: console
+
+ ktutil -v add -V 1 -e aes256-cts -p SYNNEFO.NSUPDATE
+
+``dnsutils`` debian packages includes ``nsupdate`` client while
+``kstart`` and ``heimdal-clients`` packages are required in case
+kerberos authentication is desired.
+
+Since we add/remove entries during ifup/ifdown
 scripts, we use this only during instance remove/shutdown/rename. It
 does not rely on exported environment but it queries first the DNS
 server to obtain current entries and then it invokes the necessary
