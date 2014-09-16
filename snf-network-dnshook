@@ -69,28 +69,6 @@ else
   exit 0
 fi
 
-update_dns () {
-
-  if [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_CREATE" ]; then
-    update_all add
-  elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_REMOVE" ]; then
-    update_all delete
-  elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_RENAME" ]; then
-    update_all delete
-    # Let's override a variable and add ourselves
-    INSTANCE=$GANETI_INSTANCE_NEW_NAME
-    update_all add
-  elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_STARTUP" ]; then
-    update_all add
-  elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_SHUTDOWN" ]; then
-    update_all delete
-  elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_REBOOT" ]; then
-    update_all add
-  elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_SET_PARAMS" ]; then
-    update_all add
-  fi
-
-}
 
 # Main starts here
 
@@ -138,7 +116,19 @@ for idx in $(seq $FIRST $LAST); do
     $DNS_TAG)
 
       get_info
-      update_dns
+
+      if [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_CREATE" ]; then
+        update_dns add
+      elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_REMOVE" ]; then
+        update_dns delete
+      elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_RENAME" ]; then
+        update_dns delete
+        # Let's override a variable and add ourselves
+        INSTANCE=$GANETI_INSTANCE_NEW_NAME
+        update_dns add
+      elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_SET_PARAMS" ]; then
+        update_dns add
+      fi
 
       ;;
     esac
