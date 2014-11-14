@@ -390,6 +390,12 @@ send_command () {
   send
 EOF
 
+  if [ $? -eq 0 ]; then
+      log "* nsupdate: ok"
+  else
+      log "* nsupdate: failed"
+  fi
+
 }
 
 
