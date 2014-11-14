@@ -439,7 +439,7 @@ update_ptr6record () {
 
 }
 
-update_all () {
+update_dns () {
 
   local action=$1
   log "Update ($action) dns for $INSTANCE $IP $EUI64"
