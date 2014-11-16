@@ -374,7 +374,7 @@ send_command () {
   if [ "$AUTHENTICATION_METHOD" == "bind9" ]; then
     nsupdate_command="nsupdate -k $KEYFILE"
   elif [ "$AUTHENTICATION_METHOD" == "kerberos" ]; then
-    nsupdate_command="KR5BCCNAME=$KERBEROS_TICKET nsupdate -g"
+    nsupdate_command="KRB5CCNAME=$KERBEROS_TICKET nsupdate -g"
     k5start -k $KERBEROS_TICKET -u $KERBEROS_PRINCIPAL -f $KERBEROS_KEYTAB $KERBEROS_KSTART_ARGS
   elif [ "$AUTHENTICATION_METHOD" == "plain" ]; then
     nsupdate_command="nsupdate"
