@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2014 GRNET S.A. All rights reserved.
+# Copyright 2014-2016 GRNET S.A. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or
 # without modification, are permitted provided that the following
@@ -33,7 +33,7 @@
 # interpreted as representing official policies, either expressed
 # or implied, of GRNET S.A.
 
-# Configuration Fallbacks. All can(must for some of them) be overwritten by /etc/default/snf-network
+# Configuration Fallbacks. All can(must for some of them) be overwritten by /etc/default/gnt-networking
 TTL=300
 # the bind server IP/FQDN
 SERVER=""
@@ -49,13 +49,13 @@ KEYFILE=""
 KERBEROS_PRINCIPAL=
 KERBEROS_KEYTAB=/etc/krb5.keytab
 KERBEROS_KSTART_ARGS="-H 1 -l 1h"
-KERBEROS_TICKET=/var/lib/snf-network/snf-network-kerberos.tkt
+KERBEROS_TICKET=/var/lib/gnt-networking/gnt-networking-kerberos.tkt
 
 # Default authentication method
 AUTHENTICATION_METHOD=bind9
 
-source /etc/default/snf-network
-source /usr/lib/snf-network/common.sh
+source /etc/default/gnt-networking
+source /usr/lib/gnt-networking/common.sh
 
 if [ -z "$SERVER" -o -z "$FZONE" ]; then
   log "SERVER and FZONE not defined! Aborting.."

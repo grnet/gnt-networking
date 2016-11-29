@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2012-2014 GRNET S.A. All rights reserved.
+# Copyright 2014-2016 GRNET S.A. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or
 # without modification, are permitted provided that the following
@@ -33,63 +33,23 @@
 # interpreted as representing official policies, either expressed
 # or implied, of GRNET S.A.
 
-dir=$(dirname "$0")
-. "$dir"/vif-common.sh
+# dummy script for logging script/hook actions
 
-# taken from older vif-common.sh
-dev=$vif
-dev_=${dev#vif}
-domid=${dev_%.*}
-devid=${dev_#*.}
-domname=$(xm domname $domid)
+# Usage: caller msg
 
-source /etc/default/snf-network
-source /usr/lib/snf-network/common.sh
-source $GANETI_NIC_DIR/$domname/$devid
+source /etc/default/gnt-networking
+source /usr/lib/gnt-networking/common.sh
 
-INTERFACE=$dev
-INSTANCE=$domname
+caller=$(basename $1)
 
-log "Configure $INTERFACE of $INSTANCE"
-get_info
+shift
 
-try clear_routed_setup_ipv4
-try clear_routed_setup_ipv6
-try clear_routed_setup_firewall
-try clear_bridged_setup_firewall
-try clear_ebtables
-try clear_nfdhcpd
-try clear_save
+hooks_info="$GANETI_HOOKS_PATH $GANETI_HOOKS_PHASE"
 
-init_save
+msg="$@"
 
-if [ "$MODE" = "routed" ]; then
-  ip link set $INTERFACE up
-  success
-elif [ "$MODE" = "bridged" ]; then
-  ip link set $INTERFACE up
-  BRIDGE=$(xenstore_read_default "$XENBUS_PATH/bridge" "$LINK")
-  brctl addif $BRIDGE $INTERFACE
-  success
-fi
+cat >>$LOGFILE <<EOF
+$(date) $hooks_info $caller $msg
+EOF
 
-for tag in $NETWORK_TAGS; do
-  case $tag in
-  $IP_LESS_ROUTED_TAG)
-    try routed_setup_ipv4
-    try routed_setup_ipv6
-    try routed_setup_firewall
-    try send_garp
-  ;;
-  $NFDHCPD_TAG)
-    try setup_nfdhcpd
-  ;;
-  $MAC_FILTERED_TAG)
-    try init_ebtables
-    try setup_ebtables
-  ;;
-  $MASQ_TAG)
-    try setup_masq
-  ;;
-  esac
-done
+exit 0

@@ -18,9 +18,9 @@ a public route-able subnet available or just a single node with internet
 access.
 
 For the next examples we assume that the route-able subnet will be
-``192.0.2.0/24``, the gateway ``192.0.2.1``, nodes primary interface will
-be ``eth0`` while VM traffic will go through ``eth0.0`` physical VLAN.
-Of course ``eth0.222`` can be substituted with a separate physical interface
+``192.0.2.0/24``, the gateway ``192.0.2.1``, nodes' primary interface will
+be ``eth0`` while VM traffic will go through ``eth0.500`` physical VLAN.
+Of course ``eth0.500`` can be substituted with a separate physical interface
 (e.g. ``eth1``). All examples use `/etc/networ/interfaces` file, the
 common way for configuring static interfaces under Debian.
 
@@ -35,44 +35,44 @@ setup is:
 
 .. code-block:: console
 
-  auto eth0.222
-  iface eth0.222 inet manual
-      up ip link set eth0.222 up
+  auto eth0.500
+  iface eth0.500 inet manual
+      up ip link set eth0.500 up
       # Host can reach VMs in other hosts
-      up ip route add 192.0.2.0/24 dev eth0.222
+      up ip route add 192.0.2.0/24 dev eth0.500
       # Incoming traffic will be routed via extra table
-      up ip rule add iif eth0.222 lookup 222
+      up ip rule add iif eth0.500 lookup 500
       # VM-to-VM traffic will go direct through VLAN
-      up ip route add 192.0.2.0/24 dev eth0.222 table 222
+      up ip route add 192.0.2.0/24 dev eth0.500 table 500
       # Outgoing VM traffic will go through external router on VLAN
-      up ip route add default via 192.0.2.1 dev eth0.222 table 222
+      up ip route add default via 192.0.2.1 dev eth0.500 table 500
       # Enable proxy ARP and forwarding
-      up echo 1 > /proc/sys/net/ipv4/conf/eth0.222/proxy_arp
-      up echo 1 > /proc/sys/net/ipv4/conf/eth0.222/forwarding
+      up echo 1 > /proc/sys/net/ipv4/conf/eth0.500/proxy_arp
+      up echo 1 > /proc/sys/net/ipv4/conf/eth0.500/forwarding
       # Mangle ARP request originating from the host
-      up arptables -A OUTPUT -o eth0.222 --opcode request -j mangle --mangle-ip-s 192.0.2.254
-      down arptables -D OUTPUT -o eth0.222 --opcode request -j mangle
-      down ip rule del iif eth0.222 lookup 222
+      up arptables -A OUTPUT -o eth0.500 --opcode request -j mangle --mangle-ip-s 192.0.2.254
+      down arptables -D OUTPUT -o eth0.500 --opcode request -j mangle
+      down ip rule del iif eth0.500 lookup 500
 
 
-Of course instead of `222` routing table we could alias it with a more
-reasonable name (e.g. `snf_routed`):
+Of course instead of `500` routing table we could alias it with a more
+reasonable name (e.g. `routed_net`):
 
 .. code-block:: console
 
-  echo 222 snf_routed >> /etc/iproute2/rt_tables
+  echo 500 routed_net >> /etc/iproute2/rt_tables
 
 For a node that acts **only** as a router we have:
 
 .. code-block:: console
 
-  auto eth0.222
-  iface eth0.222 inet manual
-      up ip link set eth0.222 up
+  auto eth0.500
+  iface eth0.500 inet manual
+      up ip link set eth0.500 up
       # Add gateway address to the interface
-      up ip addr add 192.0.2.1/24 dev eth0.222
+      up ip addr add 192.0.2.1/24 dev eth0.500
       # Enable forwarding and NAT
-      up echo 1 > /proc/sys/net/ipv4/conf/eth0.222/forwarding
+      up echo 1 > /proc/sys/net/ipv4/conf/eth0.500/forwarding
       up iptables -t nat -I POSTROUTING -o eth0 -s 192.0.2.0/24 -j MASQUERADE
       down iptables -t nat -I POSTROUTING -o eth0 -s 192.0.2.0/24 -j MASQUERADE
 
@@ -81,28 +81,28 @@ For a node that acts both as a router and a VMC we have:
 
 .. code-block:: console
 
-  auto eth0.222
-  iface eth0.222 inet manual
-      up ip link set eth0.222 up
+  auto eth0.500
+  iface eth0.500 inet manual
+      up ip link set eth0.500 up
       # Outgoing VM traffic is routed via extra table
-      up ip rule add iif eth0.222 lookup 222
+      up ip rule add iif eth0.500 lookup 500
       # Host-to-VM traffic is routed via extra table
-      up ip rule add to 192.0.2.0/24 lookup 222
+      up ip rule add to 192.0.2.0/24 lookup 500
       # VM-to-VM and Router-to-VM traffic will go direct through VLAN
-      up ip route add 192.0.2.0/24 dev eth0.222 table 222
+      up ip route add 192.0.2.0/24 dev eth0.500 table 500
       # Add gateway address to the interface
-      up ip addr add 192.0.2.1 dev eth0.222
-      up echo 1 > /proc/sys/net/ipv4/conf/eth0.222/proxy_arp
-      up echo 1 > /proc/sys/net/ipv4/conf/eth0.222/forwarding
+      up ip addr add 192.0.2.1 dev eth0.500
+      up echo 1 > /proc/sys/net/ipv4/conf/eth0.500/proxy_arp
+      up echo 1 > /proc/sys/net/ipv4/conf/eth0.500/forwarding
       up iptables -t nat -I POSTROUTING -o eth0 -s 192.0.2.0/24 -j MASQUERADE
       down iptables -t nat -I POSTROUTING -o eth0 -s 192.0.2.0/24 -j MASQUERADE
-      down ip rule del to 192.0.2.0/24 lookup 222
+      down ip rule del to 192.0.2.0/24 lookup 500
 
 
 In order to use a more compact `interfaces` file, custom scripts should be
 used for ifup/ifdown since this setup is not a common practice.  Currently
-these scripts are included only as examples in snf-network package but soon
-will be provided by `snf-network-helper`. Please see `interfaces` example along
+these scripts are included only as examples in gnt-networking package but soon
+will be provided by `gnt-networking-helper`. Please see `interfaces` example along
 with `vmrouter.ifup`, `vmrouter.ifdown`.
 
 .. _routed-traffic:
@@ -217,12 +217,12 @@ An example interface file for the case where host is only VMC could be:
 
 .. code-block:: console
 
-  auto eth0.222
-  iface eth0.222 inet6 manual
-    up ip link set eth0.222 up
-    up ip -6 route add 2001:db8::/64 dev eth0.222
-    up ip -6 route add 2001:db8::/64 dev eth0.222 table 222
-    up ip -6 route add default via 2001:db8::1 dev eth0.222 table 222
-    up ip -6 rule add iif eth0.222 lookup 222
-    up echo 1 > /proc/sys/net/ipv6/conf/eth0.222/proxy_ndp
-    down ip -6 rule del iif eth0.222 lookup 222
+  auto eth0.500
+  iface eth0.500 inet6 manual
+    up ip link set eth0.500 up
+    up ip -6 route add 2001:db8::/64 dev eth0.500
+    up ip -6 route add 2001:db8::/64 dev eth0.500 table 500
+    up ip -6 route add default via 2001:db8::1 dev eth0.500 table 500
+    up ip -6 rule add iif eth0.500 lookup 500
+    up echo 1 > /proc/sys/net/ipv6/conf/eth0.500/proxy_ndp
+    down ip -6 rule del iif eth0.500 lookup 500

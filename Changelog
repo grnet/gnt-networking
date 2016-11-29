@@ -1,8 +1,8 @@
 .. _Changelog:
 
-v0.16rc2
+v0.1
 ========
 
-Released: Mon 10 Nov 2014 04:29:15 PM EET
+Released: Tue 29 Nov 2016 16:30:15 +0200
 
-* Support Kerberos authentication method for dynamic DNS updates
+* Initial release

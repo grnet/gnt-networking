@@ -1,10 +1,10 @@
-snf-network
+gnt-networking
 ===========
 
 Overview
 --------
 
-This is snf-network, a set of scripts that handle the network configuration of
+This is gnt-networking, a set of scripts that handle the network configuration of
 an instance inside a [Ganeti](http://code.google.com/p/ganeti) cluster.
 It takes advantage of the variables that Ganeti exports to their execution
 environment and issues all the necessary commands to ensure network
@@ -17,11 +17,11 @@ This package provides the following scripts:
 * kvm-ifup-custom: Script invoked when an interface goes up (KVM version)
 * kvm-ifdown-custom: Script invoked when an interface goes down (KVM version)
 * vif-custom: Script invoked when an interface goes up (Xen version)
-* snf-network-hook: The part of snf-network's functionality which is
+* gnt-networking-hook: The part of gnt-networking's functionality which is
   implemented as a Ganeti hook
-* snf-network-log: Simple script for logging actions from inside Ganeti
+* gnt-networking-log: Simple script for logging actions from inside Ganeti
   scripts/hooks
-* snf-network-dnshook: Ganeti hook for updating dynamic DNS entries
+* gnt-networking-dnshook: Ganeti hook for updating dynamic DNS entries
 * ifup-extra: Example script for extra, deployment-specific functionality
 * common.sh: Common library, sourced by all above scripts.
 * runlocked: Helper script which serializes the execution of commands
@@ -31,14 +31,14 @@ Project Page
 ------------
 
 Please see the [official Synnefo site](http://www.synnefo.org) and the
-[latest snf-network docs](http://www.synnefo.org/docs/snf-network/latest/index.html)
+[latest gnt-networking docs](http://www.synnefo.org/docs/gnt-networking/latest/index.html)
 for more information.
 
 
 Copyright and license
 =====================
 
-Copyright 2012-2014 GRNET S.A. All rights reserved.
+Copyright 2012-2016 GRNET S.A. All rights reserved.
 
 Redistribution and use in source and binary forms, with or
 without modification, are permitted provided that the following

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2014 GRNET S.A. All rights reserved.
+# Copyright 2016 GRNET S.A. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or
 # without modification, are permitted provided that the following
@@ -36,18 +36,18 @@
 # kvm-ifdown-custom:
 # Script invoked when an interface goes up (KVM version)
 
-source /etc/default/snf-network
-source /usr/lib/snf-network/common.sh
+source /etc/default/gnt-networking
+source /usr/lib/gnt-networking/common.sh
 
 log "Cleanup $INTERFACE of $INSTANCE"
 get_info
-try clear_bridged_setup_firewall
-try clear_routed_setup_ipv4
-try clear_routed_setup_ipv6
-try clear_routed_setup_firewall
+
+try clear_routed_ipv4
+try clear_routed_ipv6
+try clear_ebtables
 try delete_neighbor_proxy
 try clear_nfdhcpd
-try clear_ebtables
-try clear_save
+try clear_firewall_${SERVICENAME}
+try clear_statefile
 
 exit 0

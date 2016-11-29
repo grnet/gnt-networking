@@ -1,12 +1,12 @@
-.. snf-network documentation master file, created by
+.. gnt-networking documentation master file, created by
    sphinx-quickstart on Wed Feb 12 20:00:16 2014.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to snf-network's documentation!
-=======================================
+Welcome to gnt-networking's documentation!
+==========================================
 
-snf-network is a set of scripts that handles the network configuration
+gnt-networking is a set of scripts that handles the network configuration
 of an instance inside a Ganeti cluster. It takes advantage of the
 variables that Ganeti exports to its execution environment and issues
 all the necessary commands to ensure network connectivity to the
@@ -115,10 +115,10 @@ This script searches for a user provided script under
 `/etc/ganeti/kvm-ifdown-custom` and executes it instead, if found.
 
 
-snf-network's scripts
+gnt-networking's scripts
 ---------------------
 
-Here we briefly describe all scripts provided by the snf-network
+Here we briefly describe all scripts provided by the gnt-networking
 package. Those scripts are needed to support the setups mentioned
 :ref:`below <setups>`.
 
@@ -126,7 +126,7 @@ package. Those scripts are needed to support the setups mentioned
 Scripts
 ^^^^^^^
 
-snf-network includes the following NIC configuration scripts. As
+gnt-networking includes the following NIC configuration scripts. As
 mentioned before those scripts are indirectly executed by the ones
 shipped with Ganeti (`kvm-ifup`, `kvm-ifdown`, `vif-ganeti`) to apply
 the requested setup.
@@ -164,9 +164,9 @@ Usually admins want to apply several rules that are tailored to their
 deployment.  In order to provide such functionality, the scripts that
 bring the interfaces up (kvm-ifup-custom, vif-custom), before exiting
 invoke a custom script (defined by the IFUP_EXTRA_SCRIPT variable of
-`/etc/default/snf-network`) if found.  snf-network package provides an
+`/etc/default/gnt-networking`) if found.  gnt-networking package provides an
 example of this script `/etc/ganeti/ifup-extra`. It defines two
-functions; setup_extra() and clean_extra().  Since snf-network is not
+functions; setup_extra() and clean_extra().  Since gnt-networking is not
 aware of the rules added by this script, the admin is responsible for
 cleaning up any stale rule found due to a previous invocation. In other
 words clean_extra() should wipe out every possible rule that setup_extra
@@ -198,11 +198,11 @@ the interfaces that is being brought down.
 Hooks
 ^^^^^
 
-The snf-network includes two hooks that are installed under
+The gnt-networking includes two hooks that are installed under
 `/etc/ganeti/hooks`.
 
 
-snf-network-hook
+gnt-networking-hook
 """"""""""""""""
 
 Installed under `instance-stop-post.d`, `instance-failover-post.d`,
@@ -216,9 +216,9 @@ neighbor proxy entry related to an instance's IPv6 on the source node.
 Otherwise the traffic would continue to go via the source node since
 there would be two nodes proxy-ing this IP.
 
-.. _snf-network-dnshook:
+.. _gnt-networking-dnshook:
 
-snf-network-dnshook
+gnt-networking-dnshook
 """""""""""""""""""
 
 Installed under `instance-add-post.d`, `instance-rename-post.d`,
@@ -236,19 +236,19 @@ are:
 
 For backwards compatibility we assume `bind9` if the above setting is missing.
 To disable DDNS updates unset the AUTHENTICATION_METHOD variable
-in `/etc/defaults/snf-network`.
+in `/etc/defaults/gnt-networking`.
 
 If DDNS updates are enabled, the admin must set the SERVER (the IP of
 the DNS server) and FZONE (the domain of the instances) variables found
-in `/etc/default/snf-network`. Please note that currenlty only one
+in `/etc/default/gnt-networking`. Please note that currenlty only one
 domain is supported for the instances.
 
 In case of ``bind9`` method (e.g `DDNS <https://wiki.debian.org/DDNS>`_),
-the KEYFILE variable in `/etc/default/snf-network` must point to
+the KEYFILE variable in `/etc/default/gnt-networking` must point to
 the `.private` file created by ``dnssec-keygen``.
 
 In case of ``kerberos`` method (e.g. against Active Directory),
-snf-network uses the -g option of nsupdate (GSS-TSIG mode). Prior to that,
+gnt-networking uses the -g option of nsupdate (GSS-TSIG mode). Prior to that,
 it uses "k5start -H" to ensure there is a happy ticket (see
 KERBEROS_TICKET default option). In case the ticket is invalid, it will
 use a keytab containing the password and try obtain a ticket
@@ -291,7 +291,7 @@ add a tag to a network run:
 
   gnt-network add-tags <network-name> <tag1> <tag2> ...
 
-Besides that, please see :ref:`here <configure>` how setup snf-network.
+Besides that, please see :ref:`here <configure>` how setup gnt-networking.
 
 ip-less-routed
 ^^^^^^^^^^^^^^
@@ -338,7 +338,7 @@ interface to the corresponding bridge (found through the LINK variable).
 
 Please note that a one-to-one relationship between bridges, vlans, and
 network should be guaranteed by the end-user or some other external
-component on the upper layers (e.g., Synnefo).
+component on the upper layers (e.g., ganetimgr, Synnefo).
 
 
 .. _dns:
@@ -346,16 +346,16 @@ component on the upper layers (e.g., Synnefo).
 dns
 ^^^
 
-snf-network can update an external `DDNS
+gnt-networking can update an external `DDNS
 <https://wiki.debian.org/DDNS>`_ server. If the `dns` network tag is
-found, `snf-network-dnshook` will use `nsupdate` and add/remove entries
+found, `gnt-networking-dnshook` will use `nsupdate` and add/remove entries
 related to the interface that is being managed. For more details see
-`snf-network-dnshook`_.
+`gnt-networking-dnshook`_.
 
 nfdhcpd
 ^^^^^^^
 
-snf-network creates binding files with all info required under
+gnt-networking creates binding files with all info required under
 `/var/lib/nfdhcpd/` directory so that `nfdhcpd`_ can reply to DHCP, NS,
 RS, DHCPv6 and thus instances get properly configured.
 
@@ -363,7 +363,7 @@ RS, DHCPv6 and thus instances get properly configured.
 Firewall
 --------
 
-snf-network defines three security levels: protected, limited, and
+gnt-networking defines three security levels: protected, limited, and
 unprotected.
 
 - Protected means that traffic requesting new connections will be
@@ -384,7 +384,7 @@ synnefo:network:<ident>:<profile>
 `ident` is the NIC identifier (index, uuid or name).
 `profile` is one of the above security levels.
 
-snf-network package provides `/etc/ferm/snf-network.ferm` which defines
+gnt-networking package provides `/etc/ferm/gnt-networking.ferm` which defines
 the corresponding iptables chains with the proper rules.
 
 mode=routed
@@ -416,12 +416,12 @@ thus we need physdev module of iptables:
 Configure
 ---------
 
-`snf-network` exports a set of configuration variables to the admin in
-`/etc/default/snf-network`. In this section we explain how to use each
+`gnt-networking` exports a set of configuration variables to the admin in
+`/etc/default/gnt-networking`. In this section we explain how to use each
 one of them.
 
  - ``STATE_DIR`` dir to backup each interface's configuration
- - ``LOGFILE`` path to file used to log snf-network related actions
+ - ``LOGFILE`` path to file used to log gnt-networking related actions
  - ``IFUP_EXTRA_SCRIPT`` path to extra script provided by the admin for
    added/custom functionality (see :ref:`here <extra>`)
  - ``MAC_MASK`` applied to MAC in order to get the MAC prefix that
@@ -455,7 +455,7 @@ one of them.
  - ``KERBEROS_KSTART_ARGS`` are the options to pass to kstart (default
    to "-H 1 -l 1h")
  - ``KERBEROS_TICKET`` is the path to keep the ticket obtained by kstart
-   (defaults to /var/lib/snf-network/snf-network-kerberos.tkt)
+   (defaults to /var/lib/gnt-networking/gnt-networking-kerberos.tkt)
 
 
 
