@@ -38,8 +38,8 @@ source /etc/default/gnt-networking
 : ${STATE_DIR:=/var/lib/gnt-networking}
 : ${LOGFILE:=/var/log/gnt-networking.log}
 
-if [ -d /usr/lib/gnt-networking/ ]; then
-    source /usr/lib/gnt-networking/*
+if [ -d /etc/ganeti/gnt-networking/ ]; then
+    source /etc/ganeti/gnt-networking/$SERVICENAME
 fi
 
 function try {
