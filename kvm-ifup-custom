@@ -57,6 +57,9 @@ if [ "$MODE" = "routed" ]; then
 elif [ "$MODE" = "bridged" ]; then
   ip link set $INTERFACE up
   brctl addif $BRIDGE $INTERFACE
+  if [ "x$NETWORK_TAGS" = "x" ]; then
+    NETWORK_TAGS="bridged"
+  fi
 fi
 
 for tag in $NETWORK_TAGS; do
