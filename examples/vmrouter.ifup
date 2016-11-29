@@ -1,0 +1,66 @@
+#!/bin/bash
+#
+# if-up.d hook to do some weird networking stuff on IP-less interfaces
+#
+# Example:
+#
+# auto bond0.90
+# iface bond0.90 inet manual
+#         ip-routing-table 90
+#         ip-routes 192.0.2.0/24
+#         ip-gateway 192.0.2.1
+#         ip-forwarding 1
+#         ip-proxy-arp 1
+#         arp-ip 192.0.2.254
+#
+# iface bond0.90 inet6 manual
+#         ip-routing-table 90
+#         ip-routes 2001:db8::/64
+#         ip-gateway 2001:db8::1
+#         ip-forwarding 1
+#         ip-proxy-ndp 1
+
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+ip link set $IFACE up
+
+if [ "$ADDRFAM" = "inet" ]; then
+	IP="ip"
+elif [ "$ADDRFAM" = "inet6" ]; then
+	IP="ip -6"
+else
+	exit 0
+fi
+
+if [ -n "$IF_IP_ROUTING_TABLE" ]; then
+	TABLE="table $IF_IP_ROUTING_TABLE"
+else
+	# bail out early if there's no ip-routing-table defined
+	exit 0
+fi
+
+while $IP rule del iif $IFACE;do :; done 2>/dev/null
+$IP rule add iif $IFACE $TABLE
+
+for route in $IF_IP_ROUTES; do
+	$IP route add $route dev $IFACE table main
+	$IP route add $route dev $IFACE $TABLE
+done
+
+if [ -n "$IF_IP_GATEWAY" ]; then
+	$IP route add default via $IF_IP_GATEWAY dev $IFACE $TABLE
+fi
+
+if [ -n "$IF_IP_FORWARDING" ]; then
+	[ "$ADDRFAM" = "inet" ] && echo 1 > /proc/sys/net/ipv4/conf/all/forwarding
+	[ "$ADDRFAM" = "inet6" ] && echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
+fi
+
+[ "$IF_IP_PROXY_NDP" = "1" ] && [ "$ADDRFAM" = "inet6" ] && echo 1 > /proc/sys/net/ipv6/conf/$IFACE/proxy_ndp
+
+if [ "$ADDRFAM" = "inet" ]; then
+	if [ -n "$IF_ARP_IP" ]; then
+		arptables -D OUTPUT -o $IFACE --opcode request -j mangle 2>/dev/null || true
+		arptables -A OUTPUT -o $IFACE --opcode request -j mangle --mangle-ip-s $IF_ARP_IP
+	fi
+fi
