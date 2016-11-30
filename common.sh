@@ -237,6 +237,16 @@ function setup_nfdhcpd {
     umask 022
     source /etc/default/nfdhcpd
 
+    if [ "$DISABLE_IPV4" == "1" ]; then
+      local NETWORK_SUBNET=''
+      local IP=''
+    fi
+
+    if [ "$DISABLE_IPV6" == "1" ]; then
+      local NETWORK_SUBNET6=''
+      local EUI64=''
+    fi
+
     FILE=$NFDHCPD_STATE_DIR/$INTERFACE
     
     #import contents from pre_ function
@@ -244,7 +254,7 @@ function setup_nfdhcpd {
       local FILECONTENTS=$NFDHCPDFILECONTENTS
     else
       local FILECONTENTS=""
-    fi  
+    fi
 
     FILECONTENTS+="INDEV=$INDEV
 IP=$IP
@@ -403,11 +413,19 @@ update_ptr6record () {
 update_dns () {
 
   local action=$1
+  local action_ipv4=$action
+  local action_ipv6=$action
   log "Update ($action) dns for $INSTANCE $IP $EUI64"
-  update_arecord $action
-  update_aaaarecord $action
-  update_ptrrecord $action
-  update_ptr6record $action
+  if [ -n $DISABLE_IPV4 -a "X$action" == "Xadd" ]; then
+    action_ipv4="delete"
+  fi
+  update_arecord $action_ipv4
+  update_ptrrecord $action_ipv4
+  if [ -n $DISABLE_IPV6 -a "X$action" == "Xadd" ]; then
+    action_ipv6="delete"
+  fi
+  update_aaaarecord $action_ipv6
+  update_ptr6record $action_ipv6
 
 }
 
@@ -472,11 +490,11 @@ get_mode_info () {
   local link=$2
   local iface=$3
 
-  if [ "$mode" = "routed" ]; then
+  if [ "$mode" == "routed" ]; then
     BRIDGE=
     TABLE=$link
     INDEV=$iface
-  elif [ "$mode" = "bridged" ]; then
+  elif [ "$mode" == "bridged" ]; then
     BRIDGE=$link
     TABLE=
     INDEV=$link

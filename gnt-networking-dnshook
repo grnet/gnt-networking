@@ -118,14 +118,26 @@ for idx in $(seq $FIRST $LAST); do
   link=GANETI_INSTANCE_NIC${idx}_LINK
   subnet=GANETI_INSTANCE_NIC${idx}_NETWORK_SUBNET
   subnet6=GANETI_INSTANCE_NIC${idx}_NETWORK_SUBNET6
-  tags=GANETI_INSTANCE_NIC${idx}_NETWORK_TAGS
+  itags=GANETI_INSTANCE_TAGS
+  ntags=GANETI_INSTANCE_NIC${idx}_NETWORK_TAGS
   eval IP=\$$ip
   eval MAC=\$$mac
   eval MODE=\$$mode
   eval LINK=\$$link
+  eval TAGS=\$$itags
   eval NETWORK_SUBNET=\$$subnet
   eval NETWORK_SUBNET6=\$$subnet6
-  eval NETWORK_TAGS=\$$tags
+  eval NETWORK_TAGS=\$$ntags
+
+  # Ability to disable IPv4 or IPv6 per instance
+  for itag in $TAGS; do
+    if [ "X$itag" == "Xdisable_ipv6" ]; then
+        DISABLE_IPV6=1
+    fi
+    if [ "X$itag" == "Xdisable_ipv4" ]; then
+        DISABLE_IPV4=1
+    fi
+  done
 
   for tag in $NETWORK_TAGS; do
     case $tag in
@@ -143,6 +155,11 @@ for idx in $(seq $FIRST $LAST); do
         INSTANCE=$GANETI_INSTANCE_NEW_NAME
         update_dns add
       elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_SET_PARAMS" ]; then
+        update_dns add
+      elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_STARTUP" ]; then
+        update_dns add
+      elif [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_REBOOT" ]; then
+        update_dns delete
         update_dns add
       fi
 
