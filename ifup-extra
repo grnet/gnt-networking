@@ -48,8 +48,8 @@
 # some-prefix must NOT be synnefo:network: since this is already used by
 # synnefo for setting up firewalls, etc.
 
-source /etc/default/snf-network
-source /usr/lib/snf-network/common.sh
+source /etc/default/gnt-networking
+source /usr/lib/gnt-networking/common.sh
 
 # Useful environment vars
 # INTERFACE, INSTANCE, IP, NETWORK_TAGS, MODE, TABLE
@@ -58,9 +58,9 @@ source /usr/lib/snf-network/common.sh
 function clean_extra (){
 
   iptables -D FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT
-  iptables -D FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT -m comment --comment "snf-network_extra"
+  iptables -D FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT -m comment --comment "gnt-networking_extra"
   ip6tables -D FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT
-  ip6tables -D FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT -m comment --comment "snf-network_extra"
+  ip6tables -D FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT -m comment --comment "gnt-networking_extra"
 
 }
 
@@ -86,8 +86,8 @@ function setup_extra () {
       mail)
       # Here add iptalbes rule..
       log "Tag $tag found: Applying rule for $INTERFACE..."
-      iptables  -I FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT -m comment --comment "snf-network_extra"
-      ip6tables -I FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT -m comment --comment "snf-network_extra"
+      iptables  -I FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT -m comment --comment "gnt-networking_extra"
+      ip6tables -I FORWARD -i $INTERFACE -p tcp --dport 25 -j ACCEPT -m comment --comment "gnt-networking_extra"
     ;;
     esac
   done
@@ -97,9 +97,9 @@ function setup_extra () {
 function save_all_tables () {
 
   date > $STATE_DIR/date
-  iptables-save > $STATE_DIR/snf-network.v4
-  ip6tables-save > $STATE_DIR/snf-network.v6
-  arptables-save > $STATE_DIR/snf-network.arp
+  iptables-save > $STATE_DIR/gnt-networking.v4
+  ip6tables-save > $STATE_DIR/gnt-networking.v6
+  arptables-save > $STATE_DIR/gnt-networking.arp
 
 }
 
