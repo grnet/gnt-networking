@@ -57,6 +57,8 @@ if [ "$MODE" = "routed" ]; then
 elif [ "$MODE" = "bridged" ]; then
   ip link set $INTERFACE up
   brctl addif $BRIDGE $INTERFACE
+  # many people have bridged networks that are not added to gnt-network
+  # use this hack to apply configuration to these as well
   if [ "x$NETWORK_TAGS" = "x" ]; then
     NETWORK_TAGS="bridged"
   fi
