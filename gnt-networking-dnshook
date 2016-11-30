@@ -63,8 +63,14 @@ if [ -e /etc/ganeti/dnshook.conf ]; then
 fi
 
 
-if [ -z "$SERVER" -o -z "$FZONE" ]; then
-  log "SERVER and FZONE not defined! Aborting.."
+if [ -z "$SERVER" ]; then
+  log "SERVER not defined! Aborting.."
+  exit 0
+fi
+
+echo $GANETI_INSTANCE_NAME | grep -q '\.' 1>/dev/null 2>&1
+if [ "$?" -gt 0 ] && [ -z "$FZONE" ]; then
+  log "Instance is not FQDN and FZONE not defined! Aborting.."
   exit 0
 fi
 
