@@ -335,7 +335,13 @@ update_arecord () {
   local action=$1
   local command=
   if [ -n "$IP" ]; then
-    command="update $action $INSTANCE.$FZONE $TTL A $IP"
+    echo $INSTANCE | grep -q '\.' 1>/dev/null 2>&1
+    # if INSTANCE is not FQDN append FZONE
+    if [ "$?" -gt 0 ]; then
+      command="update $action $INSTANCE.$FZONE $TTL A $IP"
+    else
+      command="update $action $INSTANCE $TTL A $IP"
+    fi
     send_command "$command"
   fi
 
@@ -347,7 +353,13 @@ update_aaaarecord () {
   local action=$1
   local command=
   if [ -n "$EUI64" ]; then
-    command="update $action $INSTANCE.$FZONE $TTL AAAA $EUI64"
+    echo $INSTANCE | grep -q '\.' 1>/dev/null 2>&1
+    # if INSTANCE is not FQDN append FZONE
+    if [ "$?" -gt 0 ]; then
+      command="update $action $INSTANCE.$FZONE $TTL AAAA $EUI64"
+    else
+      command="update $action $INSTANCE $TTL AAAA $EUI64"
+    fi
     send_command "$command"
   fi
 
@@ -358,8 +370,14 @@ update_ptrrecord () {
 
   local action=$1
   local command=
-  if [ -n "$IP" ]; then
-    command="update $action $RLPART.$RZONE. $TTL PTR $INSTANCE.$FZONE"
+  if [ -n "$INSTANCE" ]; then
+    echo $INSTANCE | grep -q '\.' 1>/dev/null 2>&1
+    # if INSTANCE is not FQDN append FZONE
+    if [ "$?" -gt 0 ]; then
+      command="update $action $RLPART.$RZONE. $TTL PTR $INSTANCE.$FZONE"
+    else
+      command="update $action $RLPART.$RZONE. $TTL PTR $INSTANCE"
+    fi
     send_command "$command"
   fi
 
@@ -370,7 +388,13 @@ update_ptr6record () {
   local action=$1
   local command=
   if [ -n "$EUI64" ]; then
-    command="update $action $R6LPART$R6ZONE. $TTL PTR $INSTANCE.$FZONE"
+    echo $INSTANCE | grep -q '\.' 1>/dev/null 2>&1
+    # if INSTANCE is not FQDN append FZONE
+    if [ "$?" -gt 0 ]; then
+      command="update $action $R6LPART$R6ZONE. $TTL PTR $INSTANCE.$FZONE"
+    else
+      command="update $action $R6LPART$R6ZONE. $TTL PTR $INSTANCE"
+    fi
     send_command "$command"
   fi
 
@@ -488,8 +512,17 @@ query_dns () {
 
   log "Query dns for $INSTANCE"
   HOSTQ="host -s -R 3 -W 3"
-  HOST_IP_ALL=$($HOSTQ $INSTANCE.$FZONE $SERVER | sed -n 's/.*has address //p')
-  HOST_IP6_ALL=$($HOSTQ $INSTANCE.$FZONE $SERVER | sed -n 's/.*has IPv6 address //p')
+  echo $INSTANCE | grep -q '\.' 1>/dev/null 2>&1
+  # if INSTANCE is not FQDN append FZONE
+  HOST_IP_ALL=""
+  HOST_IP6_ALL=""
+  if [ "$?" -gt 0 ]; then
+    HOST_IP_ALL=$($HOSTQ $INSTANCE.$FZONE $SERVER | sed -n 's/.*has address //p')
+    HOST_IP6_ALL=$($HOSTQ $INSTANCE.$FZONE $SERVER | sed -n 's/.*has IPv6 address //p')
+  else
+    HOST_IP_ALL=$($HOSTQ $INSTANCE $SERVER | sed -n 's/.*has address //p')
+    HOST_IP6_ALL=$($HOSTQ $INSTANCE $SERVER | sed -n 's/.*has IPv6 address //p')
+  fi
   log "* ip($INSTANCE) -> $HOST_IP_ALL"
   log "* ip6($INSTANCE) -> $HOST_IP6_ALL"
 
@@ -497,7 +530,7 @@ query_dns () {
 
 # Reset all entries related to the specific instance
 # This should be invoced only during instance modification
-# because we do not know which nics have been modify
+# because we do not know which nics have been modified
 reset_dns () {
 
   # This should remove the A, AAAA, CNAME entries

@@ -37,7 +37,7 @@
 TTL=300
 # the bind server IP/FQDN
 SERVER=""
-# this is the .vm.synnefo.live.
+# this is the .vm.ganeti.xyz
 # Leave empty if only reverse dns management is needed.
 # TODO: make this zone to be instance specific!!!
 FZONE=""
@@ -56,6 +56,12 @@ AUTHENTICATION_METHOD=bind9
 
 source /etc/default/gnt-networking
 source /usr/lib/gnt-networking/common.sh
+
+# override DNS settings by dnshook.conf
+if [ -e /etc/ganeti/dnshook.conf ]; then
+    source /etc/ganeti/dnshook.conf
+fi
+
 
 if [ -z "$SERVER" -o -z "$FZONE" ]; then
   log "SERVER and FZONE not defined! Aborting.."
