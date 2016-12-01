@@ -96,7 +96,7 @@ elif [ "$AUTHENTICATION_METHOD" == "kerberos" -a -n "$KERBEROS_PRINCIPAL" ]; the
 elif [ "$AUTHENTICATION_METHOD" == "plain" ]; then
   log "Will use no authentication (plain method)"
 else
-  log "No AUTHENTICATION_METHOD defined! Aborting.."
+  log "No AUTHENTICATION_METHOD defined or KEYFILE does not exist! Aborting.."
   exit 0
 fi
 
