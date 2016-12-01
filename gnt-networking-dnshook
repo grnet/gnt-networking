@@ -68,11 +68,26 @@ if [ -z "$SERVER" ]; then
   exit 0
 fi
 
-echo $GANETI_INSTANCE_NAME | grep -q '\.' 1>/dev/null 2>&1
-if [ "$?" -gt 0 ] && [ -z "$FZONE" ]; then
-  log "Instance is not FQDN and FZONE not defined! Aborting.."
+# Exit if we do not have instance name.
+# It should be exported to hooks for instance related opcodes.
+if [ -z "$GANETI_INSTANCE_NAME" ]; then
   exit 0
 fi
+
+INSTANCE=$GANETI_INSTANCE_NAME
+echo $GANETI_INSTANCE_NAME | grep -q '\.' 1>/dev/null 2>&1
+if [ "$?" -gt 0 ] && [ -z "$FZONE" ]; then
+  log "Instance $GANETI_INSTANCE_NAME is not FQDN and FZONE not defined! Aborting.."
+  exit 0
+fi
+
+hostname=$(hostname -f)
+
+# Run only in primary node of instance
+if [ "$GANETI_INSTANCE_PRIMARY" != "$hostname" ]; then
+  exit 0
+fi
+
 
 if [ "$AUTHENTICATION_METHOD" == "bind9" -a -e "$KEYFILE" ]; then
   log "Will use $KEYFILE keyfile for nsupdate (bind9 method)."
@@ -87,20 +102,6 @@ fi
 
 
 # Main starts here
-
-INSTANCE=$GANETI_INSTANCE_NAME
-hostname=$(hostname -f)
-
-# Exit if we do not have instance name.
-# It should be exported to hooks for instance related opcodes.
-if [ -z "$INSTANCE" ]; then
-  exit 0
-fi
-
-# Run only in primary node of instance
-if [ "$GANETI_INSTANCE_PRIMARY" != "$hostname" ]; then
-  exit 0
-fi
 
 # This runs only for instance modification
 if [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_SET_PARAMS" ]; then
