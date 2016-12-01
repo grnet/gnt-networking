@@ -222,7 +222,8 @@ gnt-networking-dnshook
 """""""""""""""""""
 
 Installed under `instance-add-post.d`, `instance-rename-post.d`,
-`instance-remove-post.d` and `instance-modify-post.d` hook dirs.
+`instance-remove-post.d`, `instance-modify-post.d`, `instance-reboot-post.d` and
+`instance-startup-post.d` hook dirs.
 
 Currently it supports dynamic updates against a BIND server or
 secure Microsoft DNS (Active Directory) by using the `nsupdate`
@@ -238,10 +239,20 @@ For backwards compatibility we assume `bind9` if the above setting is missing.
 To disable DDNS updates unset the AUTHENTICATION_METHOD variable
 in `/etc/defaults/gnt-networking`.
 
-If DDNS updates are enabled, the admin must set the SERVER (the IP of
-the DNS server) and FZONE (the domain of the instances) variables found
-in `/etc/default/gnt-networking`. Please note that currenlty only one
-domain is supported for the instances.
+To enable DDNS updates, the admin must set the `SERVER` (the IP of the DNS
+server), this enables reverse zone updates. It is expected that the admin has
+precofingured DDNS updates for the specific reverse dns zones. If `FZONE` is
+defined (forward zone/domain) then instances without FQDN in their names will
+update the A/AAAA records of the forward zone. If instances have a FQDN then the
+domain of the instance name will try and get updated at the SERVER.  Default
+settings are in `/etc/default/gnt-networking` but they can be overriden by
+`/etc/ganeti/dnshook.conf`. Please note that currenlty only one domain is
+supported for the instances.
+
+In case an instance that belongs to a dual stack ganeti network must have its
+AAAA and PTR (in ip6.arpa) record removed for some reason, one can set the
+instance tag `disable_ipv6`. One must migrate or reboot the instance for changes
+to take place.
 
 In case of ``bind9`` method (e.g `DDNS <https://wiki.debian.org/DDNS>`_),
 the KEYFILE variable in `/etc/default/gnt-networking` must point to
@@ -260,7 +271,7 @@ To add a valid keytab one can use:
 
 .. code-block:: console
 
- ktutil -v add -V 1 -e aes256-cts -p SYNNEFO.NSUPDATE
+ ktutil -v add -V 1 -e aes256-cts -p GNT.NSUPDATE
 
 ``kstart`` and ``heimdal-clients`` packages are required in case
 kerberos authentication is desired.
@@ -312,6 +323,19 @@ Please see :ref:`here <routed-conf>` on how to configure it, and
 
 .. _nfdhcpd: http://www.synnefo.org/docs/nfdhcpd/latest/index.html
 
+bridged
+^^^^^^^
+
+L2 isolation can be ensured also with one dedicated physical VLAN per
+network. Each VLAN must be pre-provisioned and bridged on a separate
+bridge. So this tag actually does nothing more that bridging the TAP
+interface to the corresponding bridge (found through the LINK variable).
+
+Please note that a one-to-one relationship between bridges, vlans, and
+network should be guaranteed by the end-user or some other external
+component on the upper layers (e.g., ganetimgr, Synnefo).
+
+
 mac-filtered
 ^^^^^^^^^^^^
 
@@ -326,20 +350,6 @@ passed to Ganeti as a network option.
 
 For further info and implementation details please see :ref:`here
 <ebtables>`.
-
-
-physical-vlan
-^^^^^^^^^^^^^
-
-L2 isolation can be ensured also with one dedicated physical VLAN per
-network. Each VLAN must be pre-provisioned and bridged on a separate
-bridge. So this tag actually does nothing more that bridging the TAP
-interface to the corresponding bridge (found through the LINK variable).
-
-Please note that a one-to-one relationship between bridges, vlans, and
-network should be guaranteed by the end-user or some other external
-component on the upper layers (e.g., ganetimgr, Synnefo).
-
 
 .. _dns:
 

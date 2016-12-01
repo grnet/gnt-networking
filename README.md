@@ -10,20 +10,31 @@ It takes advantage of the variables that Ganeti exports to their execution
 environment and issues all the necessary commands to ensure network
 connectivity to the instance, based on the requested setup.
 
+Networking modes supported:
+ * Bridged
+ * Routed
+ * MAC-filtered
+ * OpenvSwitch
+
 This package provides the following scripts:
 
-* mac2eui64: Script for obtaining an EUI-64 address based on its 48-bit
-  MAC address and an IPv6 prefix
+Main scripts:
 * kvm-ifup-custom: Script invoked when an interface goes up (KVM version)
 * kvm-ifdown-custom: Script invoked when an interface goes down (KVM version)
 * vif-custom: Script invoked when an interface goes up (Xen version)
-* gnt-networking-hook: The part of gnt-networking's functionality which is
+* ifup-extra: Example script for extra, deployment-specific functionality
+* common.sh: Common library, sourced by all scripts.
+
+Hooks:
+* gnt-networking-hook: Part of gnt-networking's functionality which is
   implemented as a Ganeti hook
+* gnt-networking-dnshook: Ganeti hook for updating dynamic DNS entries
+
+Helper scripts:
+* mac2eui64: Script for obtaining an EUI-64 address based on its 48-bit
+  MAC address and an IPv6 prefix
 * gnt-networking-log: Simple script for logging actions from inside Ganeti
   scripts/hooks
-* gnt-networking-dnshook: Ganeti hook for updating dynamic DNS entries
-* ifup-extra: Example script for extra, deployment-specific functionality
-* common.sh: Common library, sourced by all above scripts.
 * runlocked: Helper script which serializes the execution of commands
   on a host machine
 
