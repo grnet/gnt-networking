@@ -144,6 +144,7 @@ for idx in $(seq $FIRST $LAST); do
     case $tag in
     $DNS_TAG)
 
+      # Fill in important variables
       get_info
 
       if [ "x$GANETI_OP_CODE" = "xOP_INSTANCE_CREATE" ]; then

@@ -40,6 +40,7 @@ source /etc/default/gnt-networking
 source /usr/lib/gnt-networking/common.sh
 
 log "Cleanup $INTERFACE of $INSTANCE"
+# Fill in important variables
 get_info
 
 try clear_routed_ipv4

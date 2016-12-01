@@ -43,6 +43,7 @@ function fix_proxy_ndp() {
   if [ "$GANETI_OLD_PRIMARY" == "$hostname" ]; then
     # This runs on the source node
     log "Fixing proxy ndp for $INSTANCE in old primary."
+    # Fill in important variables
     get_info
     delete_neighbor_proxy
   elif [ "$GANETI_NEW_PRIMARY" == "$hostname" ]; then
@@ -50,6 +51,7 @@ function fix_proxy_ndp() {
   elif [ "$GANETI_INSTANCE_PRIMARY" == "$hostname" ]; then
     # This runs on the primary node of instance
     log "Fixing proxy ndp for $INSTANCE in primary node."
+    # Fill in important variables
     get_info
     delete_neighbor_proxy
   fi
