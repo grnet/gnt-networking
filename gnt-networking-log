@@ -49,7 +49,7 @@ hooks_info="$GANETI_HOOKS_PATH $GANETI_HOOKS_PHASE"
 msg="$@"
 
 cat >>$LOGFILE <<EOF
-$(date) $hooks_info $caller $msg
+$(date '+%Y-%m-%d %H:%M:%S') $hooks_info $caller $msg
 EOF
 
 exit 0
