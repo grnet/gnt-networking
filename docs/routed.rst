@@ -100,10 +100,9 @@ For a node that acts both as a router and a VMC we have:
 
 
 In order to use a more compact `interfaces` file, custom scripts should be
-used for ifup/ifdown since this setup is not a common practice.  Currently
-these scripts are included only as examples in gnt-networking package but soon
-will be provided by `gnt-networking-helper`. Please see `interfaces` example along
-with `vmrouter.ifup`, `vmrouter.ifdown`.
+used for ifup/ifdown since this setup is not a common practice. 
+Please see `interfaces` example along with `vmrouter.ifup` and `vmrouter.ifdown` that
+are placed in /etc/network/if-up.d and /etc/network/if-down.d respectively.
 
 .. _routed-traffic:
 

@@ -32,6 +32,25 @@ iface eth0.201 inet6 manual
   ip-forwarding 1
   ip-proxy-ndp 1
 
+#################
+# BRIDGED SETUP #
+#################
+# All TAP interfaces bridged on a common bridge: br0
+# eth0 is the node's primary interface with internet access
+# eth1 is a common interface on all nodes (can be a vlan too)
+# one node will do MASQ
+auto br0
+iface br0 inet manual
+  bridge_ports eth1
+  bridge_stp off
+  bridge_fd 2
+  # These apply only for host that will do NAT
+  up ip addr add 192.0.2.1/24 dev br0
+  post-up iptables -t nat -A POSTROUTING -o eth0 -s 192.0.2.0/24 -j MASQUERADE
+
+######################
+# MAC Filtered SETUP #
+######################
 # A bridge pool to connect tap devices of private networks
 # A private network uses explicitly one vlan
 # prv1            8000.e4115bb2925c       no              eth0.2991
@@ -54,20 +73,3 @@ iface prv0 inet manual
   bridge_stp off
   bridge_fd 2
   post-up ip link set prv0 address 3c:97:0e:81:ee:45
-
-
-#################
-# BRIDGED SETUP #
-#################
-# All TAP interfaces bridged on a common bridge: br0
-# eth0 is the node's primary interface with internet access
-# eth1 is a common interface on all nodes (can be a vlan too)
-# one node will do MASQ
-auto br0
-iface br0 inet manual
-  bridge_ports eth1
-  bridge_stp off
-  bridge_fd 2
-  # These apply only for host that will do NAT
-  up ip addr add 192.0.2.1/24 dev br0
-  post-up iptables -t nat -A POSTROUTING -o eth0 -s 192.0.2.0/24 -j MASQUERADE
