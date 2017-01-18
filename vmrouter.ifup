@@ -20,6 +20,10 @@
 #         ip-forwarding 1
 #         ip-proxy-ndp 1
 
+if [ "$ADDRFAM" = "meta" ]; then
+	exit 0
+fi
+
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
 
 ip link set $IFACE up

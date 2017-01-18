@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if [ "$ADDRFAM" = "meta" ]; then
+	exit 0
+fi
+
 if [ ! -n "$IF_IP_ROUTING_TABLE" ]; then
 	# bail out early if there's no ip-routing-table defined
 	exit 0
