@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2012-2016 GRNET S.A. All rights reserved.
+# Copyright 2012-2017 GRNET S.A. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or
 # without modification, are permitted provided that the following
@@ -33,13 +33,23 @@
 # interpreted as representing official policies, either expressed
 # or implied, of GRNET S.A.
 
-# kvm-ifup-custom:
-# Script invoked when an interface goes up (KVM version)
+dir=$(dirname "$0")
+. "$dir"/vif-common.sh
 
-source /usr/share/gnt-networking/common.sh
+# taken from older vif-common.sh
+dev=$vif
+dev_=${dev#vif}
+domid=${dev_%.*}
+devid=${dev_#*.}
+domname=$(xm domname $domid)
+
+source @datadir@/gnt-networking/common.sh
+source $GANETI_NIC_DIR/$domname/$devid
+
+INTERFACE=$dev
+INSTANCE=$domname
 
 log "Configure $INTERFACE of $INSTANCE"
-
 # Fill in important variables
 get_info
 
@@ -47,64 +57,46 @@ try clear_routed_ipv4
 try clear_routed_ipv6
 try clear_ebtables
 try clear_nfdhcpd
-try clear_firewall_service
+try clear_firewall_${SERVICENAME}
 try clear_statefile
 
 write_statefile
 
-if [ "X$MODE" == "Xrouted" ]; then
-  # use a constant predefined MAC address for the tap
-  ip link set $INTERFACE addr $TAP_CONSTANT_MAC up
-  # Ability to disable IPv4 or IPv6 per instance
-  for tag in $TAGS; do
-    if [ "X$tag" == "Xdisable_ipv6" ]; then
-        DISABLE_IPV6=1
-    fi
-    if [ "X$tag" == "Xdisable_ipv4" ]; then
-        DISABLE_IPV4=1
-    fi
-  done
-elif [ "X$MODE" == "Xbridged" ]; then
+if [ "$MODE" = "routed" ]; then
   ip link set $INTERFACE up
+  success
+elif [ "$MODE" = "bridged" ]; then
+  ip link set $INTERFACE up
+  BRIDGE=$(xenstore_read_default "$XENBUS_PATH/bridge" "$LINK")
   brctl addif $BRIDGE $INTERFACE
-  # many people have bridged networks that are not added to gnt-network
-  # use this hack to apply configuration to these as well
-  if [ "x$NETWORK_TAGS" == "x" ]; then
-    NETWORK_TAGS="bridged"
-  fi
+  success
 fi
 
 for tag in $NETWORK_TAGS; do
   case $tag in
   $IP_LESS_ROUTED_TAG)
-    try pre_setup_routed
+    try pre_setup_routed_${SERVICENAME}
     try setup_routed
-    try post_setup_routed
+    try post_setup_routed_${SERVICENAME}
     try send_garp
   ;;
   $NFDHCPD_TAG)
-    try pre_setup_nfdhcpd
+    try pre_setup_nfdhcpd_${SERVICENAME}
     try setup_nfdhcpd
-    try post_setup_nfdhcpd
+    try post_setup_nfdhcpd_${SERVICENAME}
   ;;
   $MAC_FILTERED_TAG)
-    try pre_setup_ebtables
+    try pre_setup_ebtables_${SERVICENAME}
     try setup_ebtables
-    try post_setup_ebtables
+    try post_setup_ebtables_${SERVICENAME}
   ;;
   $BRIDGED_TAG)
-    try pre_setup_bridged
+    try pre_setup_bridged_${SERVICENAME}
     try setup_bridged
-    try post_setup_bridged
+    try post_setup_bridged_${SERVICENAME}
   ;;
   $MASQ_TAG)
     try setup_masq
   ;;
   esac
 done
-
-if [ -x "$IFUP_EXTRA_SCRIPT" ]; then
-  exec $IFUP_EXTRA_SCRIPT "$@"
-fi
-
-exit 0

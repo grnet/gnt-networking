@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2011-2016 GRNET S.A. All rights reserved.
+# Copyright 2011-2017 GRNET S.A. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or
 # without modification, are permitted provided that the following
@@ -48,7 +48,7 @@
 # some-prefix must NOT be synnefo:network: since this is already used by
 # synnefo for setting up firewalls, etc.
 
-source /usr/share/gnt-networking/common.sh
+source @datadir@/gnt-networking/common.sh
 
 # Useful environment vars
 # INTERFACE, INSTANCE, IP, NETWORK_TAGS, MODE, TABLE

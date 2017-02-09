@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2014-2016 GRNET S.A. All rights reserved.
+# Copyright 2014-2017 GRNET S.A. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or
 # without modification, are permitted provided that the following
@@ -33,7 +33,7 @@
 # interpreted as representing official policies, either expressed
 # or implied, of GRNET S.A.
 
-source /usr/share/gnt-networking/common.sh
+source @datadir@/gnt-networking/common.sh
 
 # override DNS settings by dnshook.conf
 if [ -e /etc/ganeti/dnshook.conf ]; then

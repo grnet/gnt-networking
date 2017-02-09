@@ -33,17 +33,17 @@
 # interpreted as representing official policies, either expressed
 # or implied, of GRNET S.A.
 
-if [ -f /etc/default/gnt-networking ]; then
-    source /etc/default/gnt-networking
+if [ -f @sysconfdir@/default/gnt-networking ]; then
+    source @sysconfdir@/default/gnt-networking
 fi
 
 : ${SERVICENAME:=}
-: ${STATE_DIR:=/var/lib/gnt-networking}
-: ${LOGFILE:=/var/log/gnt-networking.log}
-: ${IFUP_EXTRA_SCRIPT:=/etc/ganeti/ifup-extra}
+: ${STATE_DIR:=@localstatedir@/lib/gnt-networking}
+: ${LOGFILE:=@localstatedir@/log/gnt-networking.log}
+: ${IFUP_EXTRA_SCRIPT:=@sysconfdir@/ganeti/ifup-extra}
 : ${MAC_MASK:=ff:ff:f0:00:00:00}
 : ${TAP_CONSTANT_MAC:=cc:47:52:4e:45:54} # GRNET in hex :-)
-: ${GANETI_NIC_DIR:=/var/run/ganeti/xen-hypervisor/nic}
+: ${GANETI_NIC_DIR:=@localstatedir@/run/ganeti/xen-hypervisor/nic}
 : ${BRIDGED_TAG:=bridged}
 : ${IP_LESS_ROUTED_TAG:=ip-less-routed}
 : ${MAC_FILTERED_TAG:=private-filtered}
@@ -57,14 +57,14 @@ fi
 : ${TTL:=300}
 : ${KEYFILE:=}
 : ${KERBEROS_PRINCIPAL:=}
-: ${KERBEROS_KEYTAB:=/etc/krb5.keytab}
+: ${KERBEROS_KEYTAB:=@sysconfdir@/krb5.keytab}
 : ${KERBEROS_KSTART_ARGS:="-H 1 -l 1h"}
-: ${KERBEROS_TICKET:=var/lib/gnt-networking/gnt-networking-kerberos.tkt}
+: ${KERBEROS_TICKET:=@localstatedir@/lib/gnt-networking/gnt-networking-kerberos.tkt}
 
-MAC2EUI64=/usr/bin/mac2eui64
+MAC2EUI64=@libexecdir@/gnt-networking/mac2eui64
 
-if [ -d /etc/ganeti/gnt-networking/ ]; then
-    source /etc/ganeti/gnt-networking/$SERVICENAME
+if [ -d @sysconfdir@/ganeti/gnt-networking/ ]; then
+    source @sysconfdir@/ganeti/gnt-networking/$SERVICENAME
 fi
 
 function try {
@@ -151,7 +151,7 @@ function clear_ebtables {
 
 function clear_nfdhcpd {
 
-  if [ -f /etc/default/nfdhcpd ]; then
+  if [ -f @sysconfdir@/default/nfdhcpd ]; then
     rm $NFDHCPD_STATE_DIR/$INTERFACE
   fi
 

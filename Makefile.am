@@ -1,5 +1,5 @@
 progsdir=$(libexecdir)/gnt-networking
-commondir=$(datarootdir)/gnt-networking
+commondir=$(datadir)/gnt-networking
 fermdir=$(sysconfdir)/ferm
 ganetidir=$(sysconfdir)/ganeti
 hooksdir=$(ganetidir)/hooks
@@ -7,20 +7,34 @@ xendir=$(sysconfdir)/xen/scripts
 networkdir=$(sysconfdir)/network
 
 
-dist_progs_SCRIPTS = ${srcdir}/mac2eui64 ${srcdir}/runlocked \
-		     ${srcdir}/gnt-networking-log ${srcdir}/vmrouter.ifup \
-		     ${srcdir}/gnt-networking-hook ${srcdir}/vmrouter.ifdown \
-		     ${srcdir}/gnt-networking-dnshook ${srcdir}/prv-net-helper
+dist_progs_SCRIPTS = $(srcdir)/mac2eui64 $(srcdir)/runlocked \
+		     $(srcdir)/prv-net-helper $(srcdir)/vmrouter.ifup \
+		     $(srcdir)/vmrouter.ifdown $(srcdir)/gnt-networking-log \
+		     $(srcdir)/gnt-networking-hook \
+		     $(srcdir)/gnt-networking-dnshook
 
-dist_common_DATA = ${srcdir}/common.sh
+dist_common_DATA = $(srcdir)/common.sh
 
 
-dist_ferm_DATA = ${srcdir}/gnt-networking.ferm
+dist_ferm_DATA = $(srcdir)/gnt-networking.ferm
 
-dist_ganeti_SCRIPTS = ${srcdir}/kvm-ifup-custom ${srcdir}/kvm-ifdown-custom \
-		      ${srcdir}/ifup-extra
+dist_ganeti_SCRIPTS = $(srcdir)/kvm-ifup-custom $(srcdir)/kvm-ifdown-custom \
+		      $(srcdir)/ifup-extra
 
-dist_xen_SCRIPTS = ${srcdir}/vif-custom
+dist_xen_SCRIPTS = $(srcdir)/vif-custom
+
+edit = $(SED) \
+       -e 's|@sysconfdir[@]|$(sysconfdir)|g' \
+       -e 's|@localstatedir[@]|$(localstatedir)|g' \
+       -e 's|@libexecdir[@]|$(libexecdir)|g' \
+       -e 's|@datadir[@]|$(datadir)|g'
+
+%:%.in Makefile
+	rm -f $@ $@.tmp
+	srcdir=''; \
+		test -f ./$@.in || srcdir=$(srcdir)/; \
+		$(edit) $${srcdir}$@.in >$@.tmp
+	mv $@.tmp $@
 
 install-exec-hook:
 	$(MKDIR_P) $(DESTDIR)$(hooksdir)/instance-remove-post.d
@@ -51,4 +65,9 @@ install-exec-hook:
 	$(LN_S) $(progsdir)/vmrouter.ifdown $(DESTDIR)$(networkdir)/if-down.d/vmrouter
 
 	$(LN_S) $(ganetidir)/kvm-ifup-custom $(DESTDIR)$(ganetidir)/kvm-vif-bridge
+
+CLEANFILES = $(dist_ganeti_SCRIPTS) $(dist_common_DATA) $(dist_xen_SCRIPTS) \
+	     $(srcdir)/gnt-networking-log $(srcdir)/gnt-networking-hook \
+	     $(srcdir)/gnt-networking-dnshook
+
 

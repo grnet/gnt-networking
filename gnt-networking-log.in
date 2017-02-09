@@ -37,7 +37,7 @@
 
 # Usage: caller msg
 
-source /usr/share/gnt-networking/common.sh
+source @datadir@/gnt-networking/common.sh
 
 caller=$(basename $1)
 
