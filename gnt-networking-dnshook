@@ -33,29 +33,7 @@
 # interpreted as representing official policies, either expressed
 # or implied, of GRNET S.A.
 
-# Configuration Fallbacks. All can(must for some of them) be overwritten by /etc/default/gnt-networking
-TTL=300
-# the bind server IP/FQDN
-SERVER=""
-# this is the .vm.ganeti.xyz
-# Leave empty if only reverse dns management is needed.
-# TODO: make this zone to be instance specific!!!
-FZONE=""
-# the file with dns authorization keys
-KEYFILE=""
-
-# kerberos authentication settings
-# Will be used with kstart and ktutil
-KERBEROS_PRINCIPAL=
-KERBEROS_KEYTAB=/etc/krb5.keytab
-KERBEROS_KSTART_ARGS="-H 1 -l 1h"
-KERBEROS_TICKET=/var/lib/gnt-networking/gnt-networking-kerberos.tkt
-
-# Default authentication method
-AUTHENTICATION_METHOD=bind9
-
-source /etc/default/gnt-networking
-source /usr/lib/gnt-networking/common.sh
+source /usr/share/gnt-networking/common.sh
 
 # override DNS settings by dnshook.conf
 if [ -e /etc/ganeti/dnshook.conf ]; then

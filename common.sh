@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2013-2016 GRNET S.A. All rights reserved.
+# Copyright 2013-2017 GRNET S.A. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or
 # without modification, are permitted provided that the following
@@ -33,10 +33,35 @@
 # interpreted as representing official policies, either expressed
 # or implied, of GRNET S.A.
 
-source /etc/default/gnt-networking
+if [ -f /etc/default/gnt-networking ]; then
+    source /etc/default/gnt-networking
+fi
 
+: ${SERVICENAME:=}
 : ${STATE_DIR:=/var/lib/gnt-networking}
 : ${LOGFILE:=/var/log/gnt-networking.log}
+: ${IFUP_EXTRA_SCRIPT:=/etc/ganeti/ifup-extra}
+: ${MAC_MASK:=ff:ff:f0:00:00:00}
+: ${TAP_CONSTANT_MAC:=cc:47:52:4e:45:54} # GRNET in hex :-)
+: ${GANETI_NIC_DIR:=/var/run/ganeti/xen-hypervisor/nic}
+: ${BRIDGED_TAG:=bridged}
+: ${IP_LESS_ROUTED_TAG:=ip-less-routed}
+: ${MAC_FILTERED_TAG:=private-filtered}
+: ${MASQ_TAG:=masq}
+: ${NFDHCPD_TAG:=nfdhcpd}
+: ${DNS_TAG:=dns}
+: ${RUNLOCKED_OPTS:=}
+: ${AUTHENTICATION_METHOD:=bind9}
+: ${SERVER:=}
+: ${FZONE:=vm.ganeti.xyz}
+: ${TTL:=300}
+: ${KEYFILE:=}
+: ${KERBEROS_PRINCIPAL:=}
+: ${KERBEROS_KEYTAB:=/etc/krb5.keytab}
+: ${KERBEROS_KSTART_ARGS:="-H 1 -l 1h"}
+: ${KERBEROS_TICKET:=var/lib/gnt-networking/gnt-networking-kerberos.tkt}
+
+MAC2EUI64=/usr/bin/mac2eui64
 
 if [ -d /etc/ganeti/gnt-networking/ ]; then
     source /etc/ganeti/gnt-networking/$SERVICENAME

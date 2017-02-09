@@ -36,8 +36,7 @@
 # kvm-ifdown-custom:
 # Script invoked when an interface goes up (KVM version)
 
-source /etc/default/gnt-networking
-source /usr/lib/gnt-networking/common.sh
+source /usr/share/gnt-networking/common.sh
 
 log "Cleanup $INTERFACE of $INSTANCE"
 # Fill in important variables

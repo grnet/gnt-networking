@@ -33,8 +33,7 @@
 # interpreted as representing official policies, either expressed
 # or implied, of GRNET S.A.
 
-source /etc/default/gnt-networking
-source /usr/lib/gnt-networking/common.sh
+source /usr/share/gnt-networking/common.sh
 
 function fix_proxy_ndp() {
 

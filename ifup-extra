@@ -48,8 +48,7 @@
 # some-prefix must NOT be synnefo:network: since this is already used by
 # synnefo for setting up firewalls, etc.
 
-source /etc/default/gnt-networking
-source /usr/lib/gnt-networking/common.sh
+source /usr/share/gnt-networking/common.sh
 
 # Useful environment vars
 # INTERFACE, INSTANCE, IP, NETWORK_TAGS, MODE, TABLE

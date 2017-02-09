@@ -43,8 +43,7 @@ domid=${dev_%.*}
 devid=${dev_#*.}
 domname=$(xm domname $domid)
 
-source /etc/default/gnt-networking
-source /usr/lib/gnt-networking/common.sh
+source /usr/share/gnt-networking/common.sh
 source $GANETI_NIC_DIR/$domname/$devid
 
 INTERFACE=$dev
