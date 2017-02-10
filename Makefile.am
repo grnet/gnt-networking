@@ -8,9 +8,11 @@ networkdir=$(sysconfdir)/network
 
 
 dist_progs_SCRIPTS = $(srcdir)/mac2eui64 $(srcdir)/runlocked \
-		     $(srcdir)/prv-net-helper $(srcdir)/vmrouter.ifup \
-		     $(srcdir)/vmrouter.ifdown $(srcdir)/gnt-networking-hook \
+		     $(srcdir)/vmrouter.ifup $(srcdir)/vmrouter.ifdown \
+		     $(srcdir)/gnt-networking-hook \
 		     $(srcdir)/gnt-networking-dnshook
+
+dist_bin_SCRIPTS = $(srcdir)/prv-net-helper
 
 dist_common_DATA = $(srcdir)/common.sh
 
