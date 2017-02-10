@@ -153,9 +153,7 @@ function clear_ebtables {
 
 function clear_nfdhcpd {
 
-  if [ -f @sysconfdir@/default/nfdhcpd ]; then
-    rm $NFDHCPD_STATE_DIR/$INTERFACE
-  fi
+    rm -f $NFDHCPD_STATE_DIR/$INTERFACE
 
 }
 
