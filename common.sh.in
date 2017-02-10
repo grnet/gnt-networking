@@ -64,6 +64,7 @@ fi
 : ${KERBEROS_TICKET:=@localstatedir@/lib/gnt-networking/gnt-networking-kerberos.tkt}
 
 MAC2EUI64=@libexecdir@/gnt-networking/mac2eui64
+RUNLOCKED=@libexecdir@/gnt-networking/runlocked
 
 if [ -d @sysconfdir@/ganeti/gnt-networking/ ]; then
     source @sysconfdir@/ganeti/gnt-networking/$SERVICENAME
@@ -141,13 +142,13 @@ function delete_neighbor_proxy {
 
 function clear_ebtables {
 
-  runlocked $RUNLOCKED_OPTS ebtables -D FORWARD -i $INTERFACE -j $FROM
-  runlocked $RUNLOCKED_OPTS ebtables -D INPUT -i $INTERFACE -j $FROM
-  runlocked $RUNLOCKED_OPTS ebtables -D FORWARD -o $INTERFACE -j $TO
-  runlocked $RUNLOCKED_OPTS ebtables -D OUTPUT -o $INTERFACE -j $TO
+  $RUNLOCKED $RUNLOCKED_OPTS ebtables -D FORWARD -i $INTERFACE -j $FROM
+  $RUNLOCKED $RUNLOCKED_OPTS ebtables -D INPUT -i $INTERFACE -j $FROM
+  $RUNLOCKED $RUNLOCKED_OPTS ebtables -D FORWARD -o $INTERFACE -j $TO
+  $RUNLOCKED $RUNLOCKED_OPTS ebtables -D OUTPUT -o $INTERFACE -j $TO
 
-  runlocked $RUNLOCKED_OPTS ebtables -X $FROM
-  runlocked $RUNLOCKED_OPTS ebtables -X $TO
+  $RUNLOCKED $RUNLOCKED_OPTS ebtables -X $FROM
+  $RUNLOCKED $RUNLOCKED_OPTS ebtables -X $TO
 }
 
 
@@ -235,24 +236,24 @@ function setup_ebtables {
 
   # do not allow changes in ip-mac pair
   if [ -n "$IP" ]; then
-    :; # runlocked $RUNLOCKED_OPTS ebtables -A $FROM --ip-source \! $IP -p ipv4 -j DROP
+    :; # $RUNLOCKED $RUNLOCKED_OPTS ebtables -A $FROM --ip-source \! $IP -p ipv4 -j DROP
   fi
-  save runlocked $RUNLOCKED_OPTS ebtables -A $FROM -s \! $MAC -j DROP
+  save $RUNLOCKED $RUNLOCKED_OPTS ebtables -A $FROM -s \! $MAC -j DROP
   # accept dhcp responses from host (nfdhcpd)
   # this is actually not needed because nfdhcpd opens a socket and binds is with
   # tap interface so dhcp response does not go through bridge
   # INDEV_MAC=$(cat /sys/class/net/$INDEV/address)
-  # runlocked $RUNLOCKED_OPTS ebtables -A $TO -s $INDEV_MAC -p ipv4 --ip-protocol=udp  --ip-destination-port=68 -j ACCEPT
+  # $RUNLOCKED $RUNLOCKED_OPTS ebtables -A $TO -s $INDEV_MAC -p ipv4 --ip-protocol=udp  --ip-destination-port=68 -j ACCEPT
   # allow only packets from the same mac prefix
-  save runlocked $RUNLOCKED_OPTS ebtables -A $TO -s \! $MAC/$MAC_MASK -j DROP
+  save $RUNLOCKED $RUNLOCKED_OPTS ebtables -A $TO -s \! $MAC/$MAC_MASK -j DROP
 }
 
 function setup_masq {
 
   # allow packets from/to router (for masquerading)
-  # runlocked $RUNLOCKED_OPTS ebtables -A $TO -s $NODE_MAC -j ACCEPT
-  # runlocked $RUNLOCKED_OPTS ebtables -A INPUT -i $INTERFACE -j $FROM
-  # runlocked $RUNLOCKED_OPTS ebtables -A OUTPUT -o $INTERFACE -j $TO
+  # $RUNLOCKED $RUNLOCKED_OPTS ebtables -A $TO -s $NODE_MAC -j ACCEPT
+  # $RUNLOCKED $RUNLOCKED_OPTS ebtables -A INPUT -i $INTERFACE -j $FROM
+  # $RUNLOCKED $RUNLOCKED_OPTS ebtables -A OUTPUT -o $INTERFACE -j $TO
   return
 
 }
