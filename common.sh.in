@@ -107,8 +107,9 @@ function save {
 
 function log {
 
-  gnt-networking-log "$0" "$@"
+  local hooks_info="$GANETI_HOOKS_PATH $GANETI_HOOKS_PHASE"
 
+  echo "$(date '+%Y-%m-%d %H:%M:%S') $hooks_info $(basename $0) $@" >>$LOGFILE
 }
 
 function clear_routed_ipv4 {

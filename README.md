@@ -33,8 +33,6 @@ Hooks:
 Helper scripts:
 * mac2eui64: Script for obtaining an EUI-64 address based on its 48-bit
   MAC address and an IPv6 prefix
-* gnt-networking-log: Simple script for logging actions from inside Ganeti
-  scripts/hooks
 * runlocked: Helper script which serializes the execution of commands
   on a host machine
 

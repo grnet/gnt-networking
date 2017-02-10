@@ -9,8 +9,7 @@ networkdir=$(sysconfdir)/network
 
 dist_progs_SCRIPTS = $(srcdir)/mac2eui64 $(srcdir)/runlocked \
 		     $(srcdir)/prv-net-helper $(srcdir)/vmrouter.ifup \
-		     $(srcdir)/vmrouter.ifdown $(srcdir)/gnt-networking-log \
-		     $(srcdir)/gnt-networking-hook \
+		     $(srcdir)/vmrouter.ifdown $(srcdir)/gnt-networking-hook \
 		     $(srcdir)/gnt-networking-dnshook
 
 dist_common_DATA = $(srcdir)/common.sh
@@ -69,7 +68,6 @@ install-exec-hook:
 	$(LN_S) $(ganetidir)/kvm-ifup-custom $(DESTDIR)$(ganetidir)/kvm-vif-bridge
 
 CLEANFILES = $(dist_ganeti_SCRIPTS) $(dist_common_DATA) $(dist_xen_SCRIPTS) \
-	     $(srcdir)/gnt-networking-log $(srcdir)/gnt-networking-hook \
-	     $(srcdir)/gnt-networking-dnshook
+	     $(srcdir)/gnt-networking-hook $(srcdir)/gnt-networking-dnshook
 
 
