@@ -27,7 +27,9 @@ edit = $(SED) \
        -e 's|@sysconfdir[@]|$(sysconfdir)|g' \
        -e 's|@localstatedir[@]|$(localstatedir)|g' \
        -e 's|@libexecdir[@]|$(libexecdir)|g' \
-       -e 's|@datadir[@]|$(datadir)|g'
+       -e 's|@datadir[@]|$(datadir)|g' \
+       -e 's|@NFDHCPD_STATE_DIR[@]|$(NFDHCPD_STATE_DIR)|g' \
+       -e 's|@GANETI_NIC_DIR[@]|$(GANETI_NIC_DIR)|g'
 
 %:%.in Makefile
 	rm -f $@ $@.tmp

@@ -47,6 +47,8 @@ fi
 : ${BRIDGED_TAG:=bridged}
 : ${IP_LESS_ROUTED_TAG:=ip-less-routed}
 : ${MAC_FILTERED_TAG:=private-filtered}
+: ${NFDHCPD_STATE_DIR:=@NFDHCPD_STATE_DIR@}
+: ${GANETI_NIC_DIR:=@GANETI_NIC_DIR@}
 : ${MASQ_TAG:=masq}
 : ${NFDHCPD_TAG:=nfdhcpd}
 : ${DNS_TAG:=dns}
