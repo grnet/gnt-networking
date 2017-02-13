@@ -66,7 +66,7 @@ fi
 MAC2EUI64=@libexecdir@/gnt-networking/mac2eui64
 RUNLOCKED=@libexecdir@/gnt-networking/runlocked
 
-if [ -d @sysconfdir@/ganeti/gnt-networking/ ]; then
+if [ -f @sysconfdir@/ganeti/gnt-networking/$SERVICENAME ]; then
     source @sysconfdir@/ganeti/gnt-networking/$SERVICENAME
 fi
 
