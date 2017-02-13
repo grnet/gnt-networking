@@ -1,0 +1,99 @@
+# gnt-networking defaults file
+
+# SERVICENAME: Name of the service to use snf-networking for. The software
+# expects to find a file with this name under SYSCONFDIR/ganeti/gnt-networking
+# to source. This file should implement the functions:
+# {pre,post}_setup_{routed,nfdhcpd,ebtables,bridged} if needed by the service.
+# SERVICENAME=
+
+# STATE_DIR: Directory to backup the configuration of each interface.
+# STATE_DIR=@localstatedir@/lib/gnt-networking
+
+# LOGFILE: File to log gnt-networking related actions
+# LOGFILE=/var/log/gnt-networking.log
+
+# IFUP_EXTRA_SCRIPT: Extra script provided by the admin for added/custom
+# functionality
+# IFUP_EXTRA_SCRIPT=@sysconfdir@/ganeti/ifup-extra
+
+# MAC_MASK: MAC address mask used in private-filtered networks. This is applied
+# to the VMs MAC address to get the MAC prefix that guarantees L2 isolation.
+# MAC_MASK=ff:ff:f0:00:00:00
+
+# TAP_CONSTANT_MAC: MAC address that all routed TAPs will obtain
+# TAP_CONSTANT_MAC=cc:47:52:4e:45:54 # GRNET in hex :-)
+
+# NFDHCPD_STATE_DIR: Directory that hosts the nfdhcpd binding files.
+# NFDHCPD_STATE_DIR=@NFDHCPD_STATE_DIR@
+
+# GANETI_NIC_DIR: Directory to find NIC information in case of Xen
+# GANETI_NIC_DIR=@GANETI_NIC_DIR@
+
+# RUNLOCKED_OPTS: Default options for runlocked helper script. This is a valid
+# configuration for this parameter: "--id 10001 --retry-sec 0.5"
+# RUNLOCKED_OPTS=
+
+# SUPPORTED NETWORK TAGS
+# ######################
+
+# BRIDGED_TAG: This Ganeti network tag will cause the instance's TAP interface
+# to be bridged to a bridge found through the LINK variable
+# BRIDGED_TAG=bridged
+
+# IP_LESS_ROUTED_TAG: This Ganeti network tag indicates the use of a routed
+# network setup where the host does not have an IP inside the routed network
+# IP_LESS_ROUTED_TAG=ip-less-routed
+
+# MAC_FILTERED_TAG: This Ganeti network tag is used define a MAC-filtered
+# network setup. This is used to provide L2 isolation among several VMs through
+# the use of ebtables on a single bridge.
+# MAC_FILTERED_TAG=private-filtered
+
+# MASQ_TAG: This is not implemented. It's there for future use. Don't use it.
+# MASQ_TAG=masq
+
+# NFDHCPD_TAG: This Ganeti network tag is used to indicate the creation of an
+# nfdhcpd binding file so that nfhcpd can reply to DHCP, NS, RS and DHCPv6 for
+# the instance's network configuration
+# NFDHCPD_TAG=nfdhcpd
+
+# DNS_TAG: If this Ganeti tag is found a hook will update and external DDNS
+# server to add/remove entries related to the interface that is being managed.
+# DNS_TAG=dns
+
+# NS OPTIONS NEEDED BY NSUPDATE
+# #############################
+#
+# To enable this feature the SERVER and FZONE must be defined
+# A proper bind configuration is a prerequisite Please see:
+# https://wiki.debian.org/DDNS
+
+# SERVER: Name Server IP/FQDN
+# SERVER=
+
+# FZONE: DNS zone for the VMs
+# FZONE=vm.ganeti.xyz
+
+# TTL: Time to Leave for the DNS entries
+# TTL=300
+
+# AUTHENTICATION_METHOD: The authentication method to be used for dynamic DNS
+# updates. Valid methods are:
+# - plain (nsupdate)
+# - bind9 (nsupdate -k KEYFILE)
+# - kerberos (KR5BCCNAME=KERBEROS_TICKET nsupdate -g)
+# AUTHENTICATION_METHOD=bind9
+
+# KEYFILE: keyfile path to pass to nsupdate with -k option. See man page for
+# more info
+# KEYFILE=
+
+# Kerberos authentication related settings
+# Use them with k5start to obtain a valid ticket:
+#   k5start -k KERBEROS_TICKET -u KERBEROS_PRINCIPAL -f KERBEROS_KEYTAB $KERBEROS_KSTART_ARGS
+# and then invoke nsupdate with -g option against an AD controller
+# KERBEROS_PRINCIPAL=
+# KERBEROS_KEYTAB=/etc/krb5.keytab
+# KERBEROS_KSTART_ARGS="-H 1 -l 1h"
+# KERBEROS_TICKET=@localstatedir@/lib/snf-network/snf-network-kerberos.tkt
+

@@ -39,6 +39,8 @@ edit = $(SED) \
 		$(edit) $${srcdir}$@.in >$@.tmp
 	mv $@.tmp $@
 
+all-local: defaults
+
 install-exec-hook:
 	$(MKDIR_P) $(DESTDIR)$(hooksdir)/instance-remove-post.d
 	$(LN_S) $(progsdir)/gnt-networking-hook $(DESTDIR)$(hooksdir)/instance-remove-post.d/gnt-networking-hook
@@ -70,6 +72,6 @@ install-exec-hook:
 	$(LN_S) $(ganetidir)/kvm-ifup-custom $(DESTDIR)$(ganetidir)/kvm-vif-bridge
 
 CLEANFILES = $(dist_ganeti_SCRIPTS) $(dist_common_DATA) $(dist_xen_SCRIPTS) \
-	     $(srcdir)/gnt-networking-hook $(srcdir)/gnt-networking-dnshook
-
+	     $(srcdir)/gnt-networking-hook $(srcdir)/gnt-networking-dnshook \
+	     $(srcdir)/defaults
 
