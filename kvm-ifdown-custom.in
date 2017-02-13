@@ -47,7 +47,7 @@ try clear_routed_ipv6
 try clear_ebtables
 try delete_neighbor_proxy
 try clear_nfdhcpd
-try clear_firewall_${SERVICENAME}
+try clear_firewall_service
 try clear_statefile
 
 exit 0

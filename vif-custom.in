@@ -57,7 +57,7 @@ try clear_routed_ipv4
 try clear_routed_ipv6
 try clear_ebtables
 try clear_nfdhcpd
-try clear_firewall_${SERVICENAME}
+try clear_firewall_service
 try clear_statefile
 
 write_statefile
@@ -75,25 +75,25 @@ fi
 for tag in $NETWORK_TAGS; do
   case $tag in
   $IP_LESS_ROUTED_TAG)
-    try pre_setup_routed_${SERVICENAME}
+    try pre_setup_routed
     try setup_routed
-    try post_setup_routed_${SERVICENAME}
+    try post_setup_routed
     try send_garp
   ;;
   $NFDHCPD_TAG)
-    try pre_setup_nfdhcpd_${SERVICENAME}
+    try pre_setup_nfdhcpd
     try setup_nfdhcpd
-    try post_setup_nfdhcpd_${SERVICENAME}
+    try post_setup_nfdhcpd
   ;;
   $MAC_FILTERED_TAG)
-    try pre_setup_ebtables_${SERVICENAME}
+    try pre_setup_ebtables
     try setup_ebtables
-    try post_setup_ebtables_${SERVICENAME}
+    try post_setup_ebtables
   ;;
   $BRIDGED_TAG)
-    try pre_setup_bridged_${SERVICENAME}
+    try pre_setup_bridged
     try setup_bridged
-    try post_setup_bridged_${SERVICENAME}
+    try post_setup_bridged
   ;;
   $MASQ_TAG)
     try setup_masq
