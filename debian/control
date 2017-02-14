@@ -1,0 +1,27 @@
+Source: gnt-networking
+Section: net
+Priority: extra
+Maintainer: George Kargiotakis <kargig@noc.grnet.gr>
+Build-Depends: debhelper (>= 7.0.50~), iproute2, iptables, arptables, ebtables,
+               vzctl, dnsutils, bridge-utils, vlan
+Standards-Version: 3.9.1
+
+Package: gnt-networking
+Architecture: all
+Depends: ${misc:Depends}, python,
+         iproute2, iptables, arptables, ebtables, vzctl, dnsutils,
+         bridge-utils, vlan
+Breaks: grnet-vnode-tools (<< 0.9-1), nfdhcpd (<< 0.12-1)
+Provides: snf-network
+Conflicts: snf-network
+Replaces: snf-network, grnet-vnode-tools (<< 0.9-1), nfdhcpd (<< 0.12-1)
+Suggests: nfdhcpd, heimdal-clients, kstart, bind9utils
+Description: Networking support for VMs inside the Ganeti Cluster.
+ This package is responsible for setting up the networking environment
+ of each VM based on the requested setup (routed, bridge, filtered, etc.).
+ It practically gets the exported info from Ganeti and provides:
+  * ifup scripts (for KVM and Xen)
+  * ifdown scripts (for KVM)
+  * hooks for updating external DDNS setup
+  * mechanism for executing custom admin scripts
+  * mechanism to create binding files for nfdhcpd
