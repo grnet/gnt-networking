@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source @datadir@/gnt-networking/common.sh
+
 function usage {
 	echo "Usage: $0 <mode> <parent interface> <prv min> <prv max> <offset>"
 	exit 1
@@ -16,17 +18,17 @@ function up {
 	offset=$4
 
 	echo "Adding VLANs $2 - $3"
-	vconfig set_name_type DEV_PLUS_VID_NO_PAD
+	$VCONFIG set_name_type DEV_PLUS_VID_NO_PAD
 	for prv in $(seq $prv_min $prv_max); do
 		vlan=$(($prv+$offset))
 		bridge=prv$prv
 
-		vconfig add $iface $vlan
-		ifconfig $iface.$vlan up
-		brctl addbr $bridge
-		brctl setfd $bridge 0
-		brctl addif $bridge $iface.$vlan # dev_plus_vid
-		ifconfig $bridge up
+		$VCONFIG add $iface $vlan
+		$IP_CMD link set $iface.$vlan up
+		$BRCTL addbr $bridge
+		$BRCTL setfd $bridge 0
+		$BRCTL addif $bridge $iface.$vlan # dev_plus_vid
+		$IP_CMD link set $bridge up
 	done
 }
 
@@ -42,10 +44,10 @@ function down {
 		bridge=prv$prv
 
 		(
-		ifconfig $bridge down
-		brctl delif $bridge $iface.$vlan # dev_plus_vid
-		vconfig rem $iface.$vlan
-		brctl delbr $bridge
+		$IP_CMD link set $bridge down
+		$BRCTL delif $bridge $iface.$vlan # dev_plus_vid
+		$VCONFIG rem $iface.$vlan
+		$BRCTL delbr $bridge
 		) 2>/dev/null
 	done
 }

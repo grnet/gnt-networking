@@ -63,12 +63,12 @@ try clear_statefile
 write_statefile
 
 if [ "$MODE" = "routed" ]; then
-  ip link set $INTERFACE up
+  $IP_CMD link set $INTERFACE up
   success
 elif [ "$MODE" = "bridged" ]; then
-  ip link set $INTERFACE up
+  $IP_CMD link set $INTERFACE up
   BRIDGE=$(xenstore_read_default "$XENBUS_PATH/bridge" "$LINK")
-  brctl addif $BRIDGE $INTERFACE
+  $BRCTL addif $BRIDGE $INTERFACE
   success
 fi
 

@@ -29,10 +29,6 @@
 # GANETI_NIC_DIR: Directory to find NIC information in case of Xen
 # GANETI_NIC_DIR=@GANETI_NIC_DIR@
 
-# RUNLOCKED_OPTS: Default options for runlocked helper script. This is a valid
-# configuration for this parameter: "--id 10001 --retry-sec 0.5"
-# RUNLOCKED_OPTS=
-
 # SUPPORTED NETWORK TAGS
 # ######################
 
@@ -97,3 +93,30 @@
 # KERBEROS_KSTART_ARGS="-H 1 -l 1h"
 # KERBEROS_TICKET=@localstatedir@/lib/snf-network/snf-network-kerberos.tkt
 
+# EXTERNAL PROGRAM PATHS
+# ######################
+# Paths for needed programs. Uncomment and change the variables below if you do
+# not want to use the default one.
+
+# ARPTABLES=@ARPTABLES@
+# ARPTABLES_SAVE=@ARPTABLES_SAVE@
+# BRCTL=@BRCTL@
+# Older versions of ebtables cannot handle multiple ebtables processes running
+# concurrently. This could lead to failures while setting or cleaning up
+# ebtables for VM networks. Later versions support command serialization with
+# the --concurrent cmdline option (which uses flock). In order to make sure
+# that gnt-networking works as expected with old versions of the software, we
+# wrap the command around the runlocked helper which serializes the execution
+# of any processes on a host machine by waiting until a successful binding on a
+# TCPv4 port on localhost is performed. If you want to further customize the
+# locking mechanism, check the input arguments of runlocked.
+# EBTABLES=@libexecdir@/gnt-networking/runlocked @EBTABLES@
+# IP_CMD=@IP@
+# IPTABLES=@IPTABLES@
+# IPTABLES_SAVE=@IPTABLES_SAVE@
+# IP6TABLES=@IP6TABLES@
+# IP6TABLES_SAVE=@IP6TABLES_SAVE@
+# ARPSEND=@ARPSEND@
+# NDSEND=@NDSEND@
+# NSUPDATE=@NSUPDATE@
+# VCONFIG=@VCONFIG@

@@ -45,7 +45,6 @@ fi
 : ${TAP_CONSTANT_MAC:=cc:47:52:4e:45:54} # GRNET in hex :-)
 : ${NFDHCPD_STATE_DIR:=@NFDHCPD_STATE_DIR@}
 : ${GANETI_NIC_DIR:=@GANETI_NIC_DIR@}
-: ${RUNLOCKED_OPTS:=}
 : ${BRIDGED_TAG:=bridged}
 : ${IP_LESS_ROUTED_TAG:=ip-less-routed}
 : ${MAC_FILTERED_TAG:=private-filtered}
@@ -61,9 +60,21 @@ fi
 : ${KERBEROS_KEYTAB:=@sysconfdir@/krb5.keytab}
 : ${KERBEROS_KSTART_ARGS:="-H 1 -l 1h"}
 : ${KERBEROS_TICKET:=@localstatedir@/lib/gnt-networking/gnt-networking-kerberos.tkt}
+: ${IPTABLES:=@IPTABLES@}
+: ${IPTABLES_SAVE:=@IPTABLES_SAVE@}
+: ${IP6TABLES:=@IP6TABLES@}
+: ${IP6TABLES_SAVE:=@IP6TABLES_SAVE@}
+: ${ARPTABLES:=@ARPTABLES@}
+: ${ARPTABLES_SAVE:=@ARPTABLES_SAVE@}
+: ${EBTABLES:=@libexecdir@/gnt-networking/runlocked @EBTABLES@}
+: ${NSUPDATE:=@NSUPDATE@}
+: ${ARPSEND:=@ARPSEND@}
+: ${NDSEND:=@NDSEND@}
+: ${IP_CMD:=@IP@}
+: ${BRCTL:=@BRCTL@}
+: ${VCONFIG:=@VCONFIG@}
 
 MAC2EUI64=@libexecdir@/gnt-networking/mac2eui64
-RUNLOCKED=@libexecdir@/gnt-networking/runlocked
 
 if [ -f @sysconfdir@/ganeti/gnt-networking/$SERVICENAME ]; then
     source @sysconfdir@/ganeti/gnt-networking/$SERVICENAME
@@ -113,19 +124,19 @@ function log {
 
 function clear_routed_ipv4 {
 
- arptables -D OUTPUT -o $INTERFACE --opcode request -j mangle
- while ip rule del dev $INTERFACE; do :; done
- iptables -D FORWARD -i $INTERFACE -p udp --dport 67 -j DROP
+ $ARPTABLES -D OUTPUT -o $INTERFACE --opcode request -j mangle
+ while $IP_CMD rule del dev $INTERFACE; do :; done
+ $IPTABLES -D FORWARD -i $INTERFACE -p udp --dport 67 -j DROP
  # This is needed because we do not know the IP of the stale rule.
  # Additionally we cannot refer to line numbers due to possible race.
- iptables -t filter -S FORWARD | grep -w $INTERFACE | sed -e 's/-A/-D/' | xargs -L1 iptables
+ $IPTABLES -t filter -S FORWARD | grep -w $INTERFACE | sed -e 's/-A/-D/' | xargs -L1 $IPTABLES
 
 }
 
 function clear_routed_ipv6 {
 
- while ip -6 rule del dev $INTERFACE; do :; done
- ip6tables -t filter -S FORWARD | grep -w $INTERFACE | sed -e 's/-A/-D/' | xargs -L1 ip6tables
+ while $IP_CMD -6 rule del dev $INTERFACE; do :; done
+ $IP6TABLES -t filter -S FORWARD | grep -w $INTERFACE | sed -e 's/-A/-D/' | xargs -L1 $IP6TABLES
 
 }
 
@@ -136,19 +147,19 @@ function delete_neighbor_proxy {
   fi
 
   log "* Deleting Neighbor Proxy for $EUI64 on $UPLINK6"
-  ip -6 neigh del proxy $EUI64 dev $UPLINK6
+  $IP_CMD -6 neigh del proxy $EUI64 dev $UPLINK6
 
 }
 
 function clear_ebtables {
 
-  $RUNLOCKED $RUNLOCKED_OPTS ebtables -D FORWARD -i $INTERFACE -j $FROM
-  $RUNLOCKED $RUNLOCKED_OPTS ebtables -D INPUT -i $INTERFACE -j $FROM
-  $RUNLOCKED $RUNLOCKED_OPTS ebtables -D FORWARD -o $INTERFACE -j $TO
-  $RUNLOCKED $RUNLOCKED_OPTS ebtables -D OUTPUT -o $INTERFACE -j $TO
+  $EBTABLES -D FORWARD -i $INTERFACE -j $FROM
+  $EBTABLES -D INPUT -i $INTERFACE -j $FROM
+  $EBTABLES -D FORWARD -o $INTERFACE -j $TO
+  $EBTABLES -D OUTPUT -o $INTERFACE -j $TO
 
-  $RUNLOCKED $RUNLOCKED_OPTS ebtables -X $FROM
-  $RUNLOCKED $RUNLOCKED_OPTS ebtables -X $TO
+  $EBTABLES -X $FROM
+  $EBTABLES -X $TO
 }
 
 
@@ -173,17 +184,17 @@ function setup_routed_ipv4 {
   fi
 
   # mangle ARPs to come from the gw's IP
-  save arptables -A OUTPUT -o $INTERFACE --opcode request -j mangle --mangle-ip-s "$NETWORK_GATEWAY"
+  save $ARPTABLES -A OUTPUT -o $INTERFACE --opcode request -j mangle --mangle-ip-s "$NETWORK_GATEWAY"
 
   # route interface to the proper routing table
-  save ip rule add dev $INTERFACE table $TABLE
+  save $IP_CMD rule add dev $INTERFACE table $TABLE
 
   # static route mapping IP -> INTERFACE
-  save ip route replace $IP proto static dev $INTERFACE table $TABLE
+  save $IP_CMD route replace $IP proto static dev $INTERFACE table $TABLE
 
   if [ -z "$IPSPOOF" ]; then
     # Do not allow packets with different source IP
-    save iptables -A FORWARD -i $INTERFACE ! -s $IP -j DROP -m comment --comment "gnt-networking_routed"
+    save $IPTABLES -A FORWARD -i $INTERFACE ! -s $IP -j DROP -m comment --comment "gnt-networking_routed"
   fi
 
   # Enable proxy ARP
@@ -200,7 +211,7 @@ function send_garp {
   # Send GARP from host to upstream router
   echo 1 > /proc/sys/net/ipv4/ip_nonlocal_bind
   log "* Sending GARP for $IP on $UPLINK"
-  save arpsend -U -i $IP -c1 $UPLINK
+  save $ARPSEND -U -i $IP -c1 $UPLINK
   echo 0 > /proc/sys/net/ipv4/ip_nonlocal_bind
 
 }
@@ -212,9 +223,9 @@ function setup_routed_ipv6 {
     return
   fi
   # Add a routing entry for the eui-64
-  save ip -6 rule add dev $INTERFACE table $TABLE
-  save ip -6 ro replace $EUI64/128 dev $INTERFACE table $TABLE
-  save ip -6 neigh add proxy $EUI64 dev $UPLINK6
+  save $IP_CMD -6 rule add dev $INTERFACE table $TABLE
+  save $IP_CMD -6 ro replace $EUI64/128 dev $INTERFACE table $TABLE
+  save $IP_CMD -6 neigh add proxy $EUI64 dev $UPLINK6
 
   # disable proxy NDP since we're handling this on userspace
   # this should be the default, but better safe than sorry
@@ -223,12 +234,12 @@ function setup_routed_ipv6 {
 
   if [ -z "$IPSPOOF" ]; then
     # Do not allow packets with different source IP
-    save ip6tables -A FORWARD -i $INTERFACE ! -s $EUI64 -j DROP -m comment --comment "gnt-networking_routed"
+    save $IP6TABLES -A FORWARD -i $INTERFACE ! -s $EUI64 -j DROP -m comment --comment "gnt-networking_routed"
   fi
 
   # Send Unsolicited Neighbor Advertisement
   log "* Sending Unsolicited NA for $EUI64 on $UPLINK6"
-  save ndsend $EUI64 $UPLINK6
+  save $NDSEND $EUI64 $UPLINK6
 
 }
 
@@ -236,24 +247,24 @@ function setup_ebtables {
 
   # do not allow changes in ip-mac pair
   if [ -n "$IP" ]; then
-    :; # $RUNLOCKED $RUNLOCKED_OPTS ebtables -A $FROM --ip-source \! $IP -p ipv4 -j DROP
+    :; # $EBTABLES -A $FROM --ip-source \! $IP -p ipv4 -j DROP
   fi
-  save $RUNLOCKED $RUNLOCKED_OPTS ebtables -A $FROM -s \! $MAC -j DROP
+  save $EBTABLES -A $FROM -s \! $MAC -j DROP
   # accept dhcp responses from host (nfdhcpd)
   # this is actually not needed because nfdhcpd opens a socket and binds is with
   # tap interface so dhcp response does not go through bridge
   # INDEV_MAC=$(cat /sys/class/net/$INDEV/address)
-  # $RUNLOCKED $RUNLOCKED_OPTS ebtables -A $TO -s $INDEV_MAC -p ipv4 --ip-protocol=udp  --ip-destination-port=68 -j ACCEPT
+  # $EBTABLES -A $TO -s $INDEV_MAC -p ipv4 --ip-protocol=udp  --ip-destination-port=68 -j ACCEPT
   # allow only packets from the same mac prefix
-  save $RUNLOCKED $RUNLOCKED_OPTS ebtables -A $TO -s \! $MAC/$MAC_MASK -j DROP
+  save $EBTABLES -A $TO -s \! $MAC/$MAC_MASK -j DROP
 }
 
 function setup_masq {
 
   # allow packets from/to router (for masquerading)
-  # $RUNLOCKED $RUNLOCKED_OPTS ebtables -A $TO -s $NODE_MAC -j ACCEPT
-  # $RUNLOCKED $RUNLOCKED_OPTS ebtables -A INPUT -i $INTERFACE -j $FROM
-  # $RUNLOCKED $RUNLOCKED_OPTS ebtables -A OUTPUT -o $INTERFACE -j $TO
+  # $EBTABLES -A $TO -s $NODE_MAC -j ACCEPT
+  # $EBTABLES -A INPUT -i $INTERFACE -j $FROM
+  # $EBTABLES -A OUTPUT -o $INTERFACE -j $TO
   return
 
 }
@@ -300,8 +311,8 @@ EUI64=$EUI64"
 function get_uplink {
 
   local table=$1
-  UPLINK=$(ip route list table $table | grep "default via" | awk '{print $5}')
-  UPLINK6=$(ip -6 route list table $table | grep "default via" | awk '{print $5}')
+  UPLINK=$($IP_CMD route list table $table | grep "default via" | awk '{print $5}')
+  UPLINK6=$($IP_CMD -6 route list table $table | grep "default via" | awk '{print $5}')
   if [ -n "$UPLINK" ]; then
     log "* uplink($table) -> $UPLINK"
   fi
@@ -338,13 +349,13 @@ send_command () {
 
   local command="$1"
   if [ "$AUTHENTICATION_METHOD" == "bind9" ]; then
-    nsupdate_command="nsupdate -k $KEYFILE"
+    nsupdate_command="$NSUPDATE -k $KEYFILE"
   elif [ "$AUTHENTICATION_METHOD" == "kerberos" ]; then
     export KRB5CCNAME=$KERBEROS_TICKET
-    nsupdate_command="nsupdate -g"
+    nsupdate_command="$NSUPDATE -g"
     k5start -k $KERBEROS_TICKET -u $KERBEROS_PRINCIPAL -f $KERBEROS_KEYTAB $KERBEROS_KSTART_ARGS
   elif [ "$AUTHENTICATION_METHOD" == "plain" ]; then
-    nsupdate_command="nsupdate"
+    nsupdate_command="$NSUPDATE"
   else
     log "* Invalid authentication method: $AUTHENTICATION_METHOD."
     return

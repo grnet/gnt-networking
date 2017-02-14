@@ -20,18 +20,18 @@
 #         ip-forwarding 1
 #         ip-proxy-ndp 1
 
+source @datadir@/gnt-networking/common.sh
+
 if [ "$ADDRFAM" = "meta" ]; then
 	exit 0
 fi
 
-PATH=/usr/sbin:/usr/bin:/sbin:/bin
-
-ip link set $IFACE up
+$IP_CMD link set $IFACE up
 
 if [ "$ADDRFAM" = "inet" ]; then
-	IP="ip"
+	IP="$IP_CMD"
 elif [ "$ADDRFAM" = "inet6" ]; then
-	IP="ip -6"
+	IP="$IP_CMD -6"
 else
 	exit 0
 fi
@@ -64,7 +64,7 @@ fi
 
 if [ "$ADDRFAM" = "inet" ]; then
 	if [ -n "$IF_ARP_IP" ]; then
-		arptables -D OUTPUT -o $IFACE --opcode request -j mangle 2>/dev/null || true
-		arptables -A OUTPUT -o $IFACE --opcode request -j mangle --mangle-ip-s $IF_ARP_IP
+		$ARPTABLES -D OUTPUT -o $IFACE --opcode request -j mangle 2>/dev/null || true
+		$ARPTABLES -A OUTPUT -o $IFACE --opcode request -j mangle --mangle-ip-s $IF_ARP_IP
 	fi
 fi

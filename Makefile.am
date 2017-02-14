@@ -30,7 +30,20 @@ edit = $(SED) \
        -e 's|@libexecdir[@]|$(libexecdir)|g' \
        -e 's|@datadir[@]|$(datadir)|g' \
        -e 's|@NFDHCPD_STATE_DIR[@]|$(NFDHCPD_STATE_DIR)|g' \
-       -e 's|@GANETI_NIC_DIR[@]|$(GANETI_NIC_DIR)|g'
+       -e 's|@GANETI_NIC_DIR[@]|$(GANETI_NIC_DIR)|g' \
+       -e 's|@IPTABLES[@]|$(IPTABLES)|g' \
+       -e 's|@IPTABLES_SAVE[@]|$(IPTABLES_SAVE)|g' \
+       -e 's|@IP6TABLES[@]|$(IP6TABLES)|g' \
+       -e 's|@IP6TABLES_SAVE[@]|$(IP6TABLES_SAVE)|g' \
+       -e 's|@ARPTABLES[@]|$(ARPTABLES)|g' \
+       -e 's|@ARPTABLES_SAVE[@]|$(ARPTABLES_SAVE)|g' \
+       -e 's|@EBTABLES[@]|$(EBTABLES)|g' \
+       -e 's|@NSUPDATE[@]|$(NSUPDATE)|g' \
+       -e 's|@IP[@]|$(IP)|g' \
+       -e 's|@ARPSEND[@]|$(ARPSEND)|g' \
+       -e 's|@NDSEND[@]|$(NDSEND)|g' \
+       -e 's|@BRCTL[@]|$(BRCTL)|g' \
+       -e 's|@VCONFIG[@]|$(VCONFIG)|g'
 
 %:%.in Makefile
 	rm -f $@ $@.tmp
@@ -73,5 +86,6 @@ install-exec-hook:
 
 CLEANFILES = $(dist_ganeti_SCRIPTS) $(dist_common_DATA) $(dist_xen_SCRIPTS) \
 	     $(srcdir)/gnt-networking-hook $(srcdir)/gnt-networking-dnshook \
-	     $(srcdir)/defaults
+	     $(srcdir)/vmrouter.ifup $(srcdir)/vmrouter.ifdown \
+	     $(srcdir)/prv-net-helper $(srcdir)/defaults
 
