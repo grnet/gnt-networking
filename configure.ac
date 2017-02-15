@@ -25,6 +25,15 @@ AC_ARG_WITH([ganeti_nic_dir],
 
 AC_SUBST(GANETI_NIC_DIR, $ganeti_nic_dir)
 
+# --with-xen-scripts-dir
+AC_ARG_WITH([xen_scripts_dir],
+  [AS_HELP_STRING([--with-xen-scripts-dir=DIR],
+                  [DIR hosting the xen scripts [SYSCONFDIR/xen/scripts]])],
+  [xen_scripts_dir="$withval"],
+  [xen_scripts_dir="$sysconfdir/xen/scripts"])
+
+AC_SUBST(XEN_SCRIPTS_DIR, "$xen_scripts_dir")
+
 # --with-nfdhcpd-state-dir
 AC_ARG_WITH([nfdhcpd_state_dir],
   [AS_HELP_STRING([--with-nfdhcpd-state-dir=DIR],

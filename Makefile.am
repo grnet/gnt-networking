@@ -3,7 +3,7 @@ commondir=$(datadir)/gnt-networking
 fermdir=$(sysconfdir)/ferm
 ganetidir=$(GANETI_CONF_DIR)
 hooksdir=$(ganetidir)/hooks
-xendir=$(sysconfdir)/xen/scripts
+xendir=$(XEN_SCRIPTS_DIR)
 networkdir=$(sysconfdir)/network
 
 
