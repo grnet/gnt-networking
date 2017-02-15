@@ -7,6 +7,15 @@ AC_CONFIG_SRCDIR(configure)
 
 AM_INIT_AUTOMAKE([1.9 foreign tar-ustar -Wall -Wno-portability subdir-objects])
 
+# --with-ganeti-conf-dir
+AC_ARG_WITH([ganeti_conf_dir],
+  [AS_HELP_STRING([--with-ganeti-conf-dir=DIR],
+                  [DIR containing ganeti configuration [SYSCONFDIR/ganeti]])],
+  [ganeti_conf_dir="$withval"],
+  [ganeti_conf_dir="$sysconfdir/ganeti"])
+
+AC_SUBST(GANETI_CONF_DIR, $ganeti_conf_dir)
+
 # --with-ganeti-nic-dir
 AC_ARG_WITH([ganeti_nic_dir],
   [AS_HELP_STRING([--with-ganeti-nic-dir=DIR],

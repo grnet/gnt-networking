@@ -1,7 +1,7 @@
 progsdir=$(libexecdir)/gnt-networking
 commondir=$(datadir)/gnt-networking
 fermdir=$(sysconfdir)/ferm
-ganetidir=$(sysconfdir)/ganeti
+ganetidir=$(GANETI_CONF_DIR)
 hooksdir=$(ganetidir)/hooks
 xendir=$(sysconfdir)/xen/scripts
 networkdir=$(sysconfdir)/network
