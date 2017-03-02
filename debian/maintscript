@@ -1,0 +1,1 @@
+mv_conffile /etc/default/snf-network /etc/default/gnt-networking
