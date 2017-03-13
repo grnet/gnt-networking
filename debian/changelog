@@ -1,5 +1,12 @@
+gnt-networking (0.1~rc1-1~jessie) jessie; urgency=medium
+
+  * New upstream version
+
+ -- Nikos Skalkotos <skalkoto@grnet.gr>  Mon, 13 Mar 2017 16:33:03 +0200
+
 gnt-networking (0.0-1) stable; urgency=low
 
   * Dummy entry
 
  -- Nikos Skalkotos <skalkoto@grnet.gr>  Tue, 14 Feb 2017 17:56:05 +0200
+
