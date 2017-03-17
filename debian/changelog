@@ -1,5 +1,5 @@
-gnt-networking (0.0-1) stable; urgency=low
+gnt-networking (0.1~rc1-1~wheezy) wheezy; urgency=low
 
-  * Dummy entry
+  * New upstream version
 
- -- Nikos Skalkotos <skalkoto@grnet.gr>  Tue, 14 Feb 2017 17:56:05 +0200
+ -- Nikos Skalkotos <skalkoto@grnet.gr>  Fri, 17 Mar 2017 16:30:03 +0200
