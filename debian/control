@@ -2,14 +2,14 @@ Source: gnt-networking
 Section: net
 Priority: extra
 Maintainer: George Kargiotakis <kargig@noc.grnet.gr>
-Build-Depends: debhelper (>= 7.0.50~), iproute2, iptables, arptables, ebtables,
+Build-Depends: debhelper (>= 7.0.50~), iproute, iptables, arptables, ebtables,
                vzctl, dnsutils, bridge-utils, vlan
 Standards-Version: 3.9.1
 
 Package: gnt-networking
 Architecture: all
 Depends: ${misc:Depends}, python,
-         iproute2, iptables, arptables, ebtables, vzctl, dnsutils,
+         iproute, iptables, arptables, ebtables, vzctl, dnsutils,
          bridge-utils, vlan
 Breaks: grnet-vnode-tools (<< 0.9-1), nfdhcpd (<< 0.12-1)
 Provides: snf-network
