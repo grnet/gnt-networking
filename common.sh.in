@@ -243,6 +243,17 @@ function setup_routed_ipv6 {
 
 function setup_ebtables {
 
+  # Initialize the mac filtering chains
+  save $EBTABLES -N $FROM -P RETURN
+  save $EBTABLES -A FORWARD -i $INTERFACE -j $FROM
+  # This is needed for multicast packets
+  save $EBTABLES -A INPUT -i $INTERFACE -j $FROM
+
+  save $EBTABLES -N $TO -P RETURN
+  save $EBTABLES -A FORWARD -o $INTERFACE -j $TO
+  # This is needed for multicast packets
+  save $EBTABLES -A OUTPUT -o $INTERFACE -j $TO
+
   # do not allow changes in ip-mac pair
   if [ -n "$IP" ]; then
     :; # $EBTABLES -A $FROM --ip-source \! $IP -p ipv4 -j DROP
