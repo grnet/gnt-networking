@@ -66,7 +66,7 @@ fi
 : ${ARPTABLES_SAVE:=@ARPTABLES_SAVE@}
 : ${EBTABLES:=@libexecdir@/gnt-networking/runlocked @EBTABLES@}
 : ${NSUPDATE:=@NSUPDATE@}
-: ${ARPSEND:=@ARPSEND@}
+: ${ARPING:=@ARPING@}
 : ${NDSEND:=@NDSEND@}
 : ${IP_CMD:=@IP@}
 : ${BRCTL:=@BRCTL@}
@@ -207,9 +207,14 @@ function send_garp {
   fi
 
   # Send GARP from host to upstream router
+  # Sending both GARP request and GARP reply maximizes compatibility
+  # with different router implementations.
   echo 1 > /proc/sys/net/ipv4/ip_nonlocal_bind
   log "* Sending GARP for $IP on $UPLINK"
-  save $ARPSEND -U -i $IP -c1 $UPLINK
+  # GARP request
+  save $ARPING -U -c1 -I $UPLINK $IP
+  # GARP reply
+  save $ARPING -A -c1 -I $UPLINK $IP
   echo 0 > /proc/sys/net/ipv4/ip_nonlocal_bind
 
 }
