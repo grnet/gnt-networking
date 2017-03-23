@@ -295,31 +295,31 @@ else
     fi
 fi
 
-# --with-arpsend
-AC_ARG_WITH([arpsend],
-  AS_HELP_STRING([--with-arpsend=FULLPATH],
-                  [set full path to arpsend executable [auto]]),
-  [ARPSEND="$withval"])
-if test -n "$ARPSEND"; then
+# --with-arping
+AC_ARG_WITH([arping],
+  AS_HELP_STRING([--with-arping=FULLPATH],
+                  [set full path to arping executable [auto]]),
+  [ARPING="$withval"])
+if test -n "$ARPING"; then
     # user-supplied value
-    AC_MSG_CHECKING([user-supplied arpsend executable])
-    if test -f "$ARPSEND"; then
+    AC_MSG_CHECKING([user-supplied arping executable])
+    if test -f "$ARPING"; then
         :
     else
         AC_MSG_RESULT([non-existing])
-        AC_MSG_ERROR([invalid value $ARPSEND for arpsend executable])
+        AC_MSG_ERROR([invalid value $ARPING for arping executable])
     fi
-    if test -x "$ARPSEND"; then
+    if test -x "$ARPING"; then
         :
     else
         AC_MSG_RESULT([non-executable])
-        AC_MSG_ERROR([invalid value $ARPSEND for arpsend executable])
+        AC_MSG_ERROR([invalid value $ARPING for arping executable])
     fi
-    AC_MSG_RESULT([$ARPSEND])
+    AC_MSG_RESULT([$ARPING])
 else
-    AC_PATH_PROG(ARPSEND, [arpsend], [], [$PATH:/usr/sbin:/sbin])
-    if test -z "$ARPSEND" ; then
-        AC_MSG_ERROR([arpsend not found in $PATH:/usr/sbin:/sbin])
+    AC_PATH_PROG(ARPING, [arping], [], [$PATH:/usr/sbin:/sbin])
+    if test -z "$ARPING" ; then
+        AC_MSG_ERROR([arping not found in $PATH:/usr/sbin:/sbin])
     fi
 fi
 
