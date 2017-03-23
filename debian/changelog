@@ -1,3 +1,10 @@
+gnt-networking (0.1~rc2-1~jessie) jessie; urgency=medium
+
+  * Deprecates arpsend in favor of arping
+  * arping sends both GARP request and GARP reply
+
+ -- Alexandros Afentoulis <alexaf@noc.grnet.gr>  Tue, 21 Mar 2017 20:01:34 +0200
+
 gnt-networking (0.1~rc1-1~jessie) jessie; urgency=medium
 
   * New upstream version
