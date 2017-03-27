@@ -27,11 +27,11 @@ function up {
 		bridge=prv$prv
 
 		$VCONFIG add $iface $vlan
-		$IP_CMD link set $iface.$vlan up
+		$IP_CMD link set dev $iface.$vlan up
 		$BRCTL addbr $bridge
 		$BRCTL setfd $bridge 0
 		$BRCTL addif $bridge $iface.$vlan # dev_plus_vid
-		$IP_CMD link set $bridge up
+		$IP_CMD link set dev $bridge up
 	done
 }
 
@@ -47,7 +47,7 @@ function down {
 		bridge=prv$prv
 
 		(
-		$IP_CMD link set $bridge down
+		$IP_CMD link set dev $bridge down
 		$BRCTL delif $bridge $iface.$vlan # dev_plus_vid
 		$VCONFIG rem $iface.$vlan
 		$BRCTL delbr $bridge

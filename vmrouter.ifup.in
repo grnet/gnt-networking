@@ -26,7 +26,7 @@ if [ "$ADDRFAM" = "meta" ]; then
 	exit 0
 fi
 
-$IP_CMD link set $IFACE up
+$IP_CMD link set dev $IFACE up
 
 if [ "$ADDRFAM" = "inet" ]; then
 	IP="$IP_CMD"

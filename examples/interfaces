@@ -72,4 +72,4 @@ iface prv0 inet manual
   bridge_ports eth0.2990
   bridge_stp off
   bridge_fd 2
-  post-up ip link set prv0 address 3c:97:0e:81:ee:45
+  post-up ip link set dev prv0 address 3c:97:0e:81:ee:45
