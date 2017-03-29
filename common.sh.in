@@ -71,6 +71,7 @@ fi
 : ${IP_CMD:=@IP@}
 : ${BRCTL:=@BRCTL@}
 : ${VCONFIG:=@VCONFIG@}
+: ${MODPROBE:=@MODPROBE@}
 
 MAC2EUI64=@libexecdir@/gnt-networking/mac2eui64
 

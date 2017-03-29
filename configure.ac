@@ -407,6 +407,34 @@ else
     fi
 fi
 
+# --with-modprobe
+AC_ARG_WITH([modprobe],
+  AS_HELP_STRING([--with-modprobe=FULLPATH],
+                  [set full path to modprobe executable [auto]]),
+  [MODPROBE="$withval"])
+if test -n "$MODPROBE"; then
+    # user-supplied value
+    AC_MSG_CHECKING([user-supplied modprobe executable])
+    if test -f "$MODPROBE"; then
+        :
+    else
+        AC_MSG_RESULT([non-existing])
+        AC_MSG_ERROR([invalid value $MODPROBE for modprobe executable])
+    fi
+    if test -x "$MODPROBE"; then
+        :
+    else
+        AC_MSG_RESULT([non-executable])
+        AC_MSG_ERROR([invalid value $MODPROBE for modprobe executable])
+    fi
+    AC_MSG_RESULT([$MODPROBE])
+else
+    AC_PATH_PROG(MODPROBE, [modprobe], [], [$PATH:/usr/sbin:/sbin])
+    if test -z "$MODPROBE" ; then
+        AC_MSG_ERROR([modprobe not found in $PATH:/usr/sbin:/sbin])
+    fi
+fi
+
 # Check common programs
 AC_PROG_INSTALL
 AC_PROG_LN_S

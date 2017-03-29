@@ -19,7 +19,7 @@ function up {
 
 	echo "Adding VLANs $2 - $3"
 	if [ ! -f /proc/net/vlan/config ]; then
-		modprobe 8021q
+		$MODPROBE 8021q
 	fi
 	$VCONFIG set_name_type DEV_PLUS_VID_NO_PAD
 	for prv in $(seq $prv_min $prv_max); do
