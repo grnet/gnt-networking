@@ -54,7 +54,7 @@ write_statefile
 
 if [ "X$MODE" == "Xrouted" ]; then
   # use a constant predefined MAC address for the tap
-  $IP_CMD link set $INTERFACE addr $TAP_CONSTANT_MAC up
+  $IP_CMD link set dev $INTERFACE addr $TAP_CONSTANT_MAC up
   # Ability to disable IPv4 or IPv6 per instance
   for tag in $TAGS; do
     if [ "X$tag" == "Xdisable_ipv6" ]; then
@@ -65,7 +65,7 @@ if [ "X$MODE" == "Xrouted" ]; then
     fi
   done
 elif [ "X$MODE" == "Xbridged" ]; then
-  $IP_CMD link set $INTERFACE up
+  $IP_CMD link set dev $INTERFACE up
   $BRCTL addif $BRIDGE $INTERFACE
   # many people have bridged networks that are not added to gnt-network
   # use this hack to apply configuration to these as well
