@@ -10,7 +10,7 @@ Package: gnt-networking
 Architecture: all
 Depends: ${misc:Depends}, python,
          iproute2, iptables, arptables, ebtables, vzctl, dnsutils,
-         bridge-utils, vlan
+         bridge-utils, vlan, iputils-arping
 Breaks: grnet-vnode-tools (<< 0.9-1), nfdhcpd (<< 0.12-1)
 Provides: snf-network
 Conflicts: snf-network
