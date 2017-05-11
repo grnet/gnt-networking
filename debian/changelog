@@ -1,3 +1,9 @@
+gnt-networking (0.1~rc3-2~jessie) jessie; urgency=medium
+
+  * Add missing {/etc/ganeti,/var/lib}/gnt-networking directories
+
+ -- Nikos Skalkotos <skalkoto@grnet.gr>  Thu, 11 May 2017 15:49:36 +0300
+
 gnt-networking (0.1~rc3-1~jessie) jessie; urgency=medium
 
   * New upstream version
@@ -21,6 +27,7 @@ gnt-networking (0.0-1) stable; urgency=low
   * Dummy entry
 
  -- Nikos Skalkotos <skalkoto@grnet.gr>  Tue, 14 Feb 2017 17:56:05 +0200
+
 
 
 
