@@ -582,10 +582,10 @@ query_dns () {
 
   log "Query dns for $INSTANCE"
   HOSTQ="host -s -R 3 -W 3"
-  echo $INSTANCE | grep -q '\.' 1>/dev/null 2>&1
-  # if INSTANCE is not FQDN append FZONE
   HOST_IP_ALL=""
   HOST_IP6_ALL=""
+  # if INSTANCE is not FQDN append FZONE
+  echo $INSTANCE | grep -q '\.' 1>/dev/null 2>&1
   if [ "$?" -gt 0 ]; then
     HOST_IP_ALL=$($HOSTQ $INSTANCE.$FZONE $SERVER | sed -n 's/.*has address //p')
     HOST_IP6_ALL=$($HOSTQ $INSTANCE.$FZONE $SERVER | sed -n 's/.*has IPv6 address //p')
