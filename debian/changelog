@@ -1,3 +1,9 @@
+gnt-networking (0.1-1~wheezy) wheezy; urgency=low
+
+  * New upstream version
+
+ -- Nikos Skalkotos <skalkoto@grnet.gr>  Mon, 02 Oct 2017 15:14:31 +0300
+
 gnt-networking (0.1~rc2-1~wheezy) wheezy; urgency=low
 
   * New upstream version
@@ -9,4 +15,5 @@ gnt-networking (0.1~rc1-1~wheezy) wheezy; urgency=low
   * New upstream version
 
  -- Nikos Skalkotos <skalkoto@grnet.gr>  Fri, 17 Mar 2017 16:30:03 +0200
+
 
