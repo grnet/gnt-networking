@@ -99,7 +99,7 @@ IP=$IP
 EUI64=$EUI64
 LINK=$LINK
 NETWORK_NAME=$NETWORK_NAME
-INTERFACE_NAME=$INTERFACE_NAME
+INTERFACE=$INTERFACE
 NETWORK_TAGS="$NETWORK_TAGS"
 TAGS="$TAGS"
 EOF
@@ -468,12 +468,12 @@ update_dns () {
   local action_ipv4=$action
   local action_ipv6=$action
   log "Update ($action) dns for $INSTANCE $IP $EUI64"
-  if [ -n $DISABLE_IPV4 -a "X$action" == "Xadd" ]; then
+  if [ -n "$DISABLE_IPV4" -a "X$action" == "Xadd" ]; then
     action_ipv4="delete"
   fi
   update_arecord $action_ipv4
   update_ptrrecord $action_ipv4
-  if [ -n $DISABLE_IPV6 -a "X$action" == "Xadd" ]; then
+  if [ -n "$DISABLE_IPV6" -a "X$action" == "Xadd" ]; then
     action_ipv6="delete"
   fi
   update_aaaarecord $action_ipv6
@@ -582,10 +582,10 @@ query_dns () {
 
   log "Query dns for $INSTANCE"
   HOSTQ="host -s -R 3 -W 3"
-  echo $INSTANCE | grep -q '\.' 1>/dev/null 2>&1
-  # if INSTANCE is not FQDN append FZONE
   HOST_IP_ALL=""
   HOST_IP6_ALL=""
+  # if INSTANCE is not FQDN append FZONE
+  echo $INSTANCE | grep -q '\.' 1>/dev/null 2>&1
   if [ "$?" -gt 0 ]; then
     HOST_IP_ALL=$($HOSTQ $INSTANCE.$FZONE $SERVER | sed -n 's/.*has address //p')
     HOST_IP6_ALL=$($HOSTQ $INSTANCE.$FZONE $SERVER | sed -n 's/.*has IPv6 address //p')
