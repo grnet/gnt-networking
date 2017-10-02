@@ -468,12 +468,12 @@ update_dns () {
   local action_ipv4=$action
   local action_ipv6=$action
   log "Update ($action) dns for $INSTANCE $IP $EUI64"
-  if [ -n $DISABLE_IPV4 -a "X$action" == "Xadd" ]; then
+  if [ -n "$DISABLE_IPV4" -a "X$action" == "Xadd" ]; then
     action_ipv4="delete"
   fi
   update_arecord $action_ipv4
   update_ptrrecord $action_ipv4
-  if [ -n $DISABLE_IPV6 -a "X$action" == "Xadd" ]; then
+  if [ -n "$DISABLE_IPV6" -a "X$action" == "Xadd" ]; then
     action_ipv6="delete"
   fi
   update_aaaarecord $action_ipv6
