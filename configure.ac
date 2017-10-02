@@ -295,31 +295,31 @@ else
     fi
 fi
 
-# --with-arpsend
-AC_ARG_WITH([arpsend],
-  AS_HELP_STRING([--with-arpsend=FULLPATH],
-                  [set full path to arpsend executable [auto]]),
-  [ARPSEND="$withval"])
-if test -n "$ARPSEND"; then
+# --with-arping
+AC_ARG_WITH([arping],
+  AS_HELP_STRING([--with-arping=FULLPATH],
+                  [set full path to arping executable [auto]]),
+  [ARPING="$withval"])
+if test -n "$ARPING"; then
     # user-supplied value
-    AC_MSG_CHECKING([user-supplied arpsend executable])
-    if test -f "$ARPSEND"; then
+    AC_MSG_CHECKING([user-supplied arping executable])
+    if test -f "$ARPING"; then
         :
     else
         AC_MSG_RESULT([non-existing])
-        AC_MSG_ERROR([invalid value $ARPSEND for arpsend executable])
+        AC_MSG_ERROR([invalid value $ARPING for arping executable])
     fi
-    if test -x "$ARPSEND"; then
+    if test -x "$ARPING"; then
         :
     else
         AC_MSG_RESULT([non-executable])
-        AC_MSG_ERROR([invalid value $ARPSEND for arpsend executable])
+        AC_MSG_ERROR([invalid value $ARPING for arping executable])
     fi
-    AC_MSG_RESULT([$ARPSEND])
+    AC_MSG_RESULT([$ARPING])
 else
-    AC_PATH_PROG(ARPSEND, [arpsend], [], [$PATH:/usr/sbin:/sbin])
-    if test -z "$ARPSEND" ; then
-        AC_MSG_ERROR([arpsend not found in $PATH:/usr/sbin:/sbin])
+    AC_PATH_PROG(ARPING, [arping], [], [$PATH:/usr/sbin:/sbin])
+    if test -z "$ARPING" ; then
+        AC_MSG_ERROR([arping not found in $PATH:/usr/sbin:/sbin])
     fi
 fi
 
@@ -404,6 +404,34 @@ else
     AC_PATH_PROG(VCONFIG, [vconfig], [], [$PATH:/usr/sbin:/sbin])
     if test -z "$VCONFIG" ; then
         AC_MSG_ERROR([vconfig not found in $PATH:/usr/sbin:/sbin])
+    fi
+fi
+
+# --with-modprobe
+AC_ARG_WITH([modprobe],
+  AS_HELP_STRING([--with-modprobe=FULLPATH],
+                  [set full path to modprobe executable [auto]]),
+  [MODPROBE="$withval"])
+if test -n "$MODPROBE"; then
+    # user-supplied value
+    AC_MSG_CHECKING([user-supplied modprobe executable])
+    if test -f "$MODPROBE"; then
+        :
+    else
+        AC_MSG_RESULT([non-existing])
+        AC_MSG_ERROR([invalid value $MODPROBE for modprobe executable])
+    fi
+    if test -x "$MODPROBE"; then
+        :
+    else
+        AC_MSG_RESULT([non-executable])
+        AC_MSG_ERROR([invalid value $MODPROBE for modprobe executable])
+    fi
+    AC_MSG_RESULT([$MODPROBE])
+else
+    AC_PATH_PROG(MODPROBE, [modprobe], [], [$PATH:/usr/sbin:/sbin])
+    if test -z "$MODPROBE" ; then
+        AC_MSG_ERROR([modprobe not found in $PATH:/usr/sbin:/sbin])
     fi
 fi
 

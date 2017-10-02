@@ -72,7 +72,7 @@ function clean_extra (){
 function setup_extra () {
 
   ifprefixindex="some-prefix:$INTERFACE_INDEX:"
-  ifprefixname="some-prefix:$INTERFACE_NAME:"
+  ifprefixname="some-prefix:$INTERFACE:"
   ifprefixuuid="some-prefix:$INTERFACE_UUID:"
   ifprefix="some-prefix:"
 

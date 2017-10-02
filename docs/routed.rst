@@ -37,7 +37,7 @@ setup is:
 
   auto eth0.500
   iface eth0.500 inet manual
-      up ip link set eth0.500 up
+      up ip link set dev eth0.500 up
       # Host can reach VMs in other hosts
       up ip route add 192.0.2.0/24 dev eth0.500
       # Incoming traffic will be routed via extra table
