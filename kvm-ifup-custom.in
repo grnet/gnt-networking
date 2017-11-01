@@ -65,7 +65,7 @@ if [ "X$MODE" == "Xrouted" ]; then
     fi
   done
 elif [ "X$MODE" == "Xbridged" ]; then
-  $IP_CMD link set dev $INTERFACE up
+  $IP_CMD link set dev $INTERFACE mtu $(</sys/class/net/${BRIDGE}/mtu) up
   $BRCTL addif $BRIDGE $INTERFACE
   # many people have bridged networks that are not added to gnt-network
   # use this hack to apply configuration to these as well
