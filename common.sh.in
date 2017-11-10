@@ -299,28 +299,20 @@ function setup_nfdhcpd {
       local EUI64=''
     fi
 
-    FILE=$NFDHCPD_STATE_DIR/$INTERFACE
-    
-    #import contents from pre_ function
-    if [ -n "$NFDHCPDFILECONTENTS" ]; then
-      local FILECONTENTS=$NFDHCPDFILECONTENTS
-    else
-      local FILECONTENTS=""
-    fi
-
-    FILECONTENTS+="INDEV=$INDEV
+    # NFDHCPDFILECONTENTS may be set in the pre_ function
+    cat > "$NFDHCPD_STATE_DIR/$INTERFACE" <<EOF
+$NFDHCPDFILECONTENTS
+INDEV=$INDEV
 IP=$IP
 MAC=$MAC
 HOSTNAME=$INSTANCE
-TAGS=\"$TAGS\"
+TAGS="$TAGS"
 GATEWAY=$NETWORK_GATEWAY
 SUBNET=$NETWORK_SUBNET
 GATEWAY6=$NETWORK_GATEWAY6
 SUBNET6=$NETWORK_SUBNET6
-EUI64=$EUI64"
-
-    echo "$FILECONTENTS" >$FILE
-  fi
+EUI64=$EUI64
+EOF
 }
 
 function get_uplink {
