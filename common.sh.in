@@ -42,6 +42,7 @@ fi
 : ${MAC_MASK:=ff:ff:f0:00:00:00}
 : ${TAP_CONSTANT_MAC:=cc:47:52:4e:45:54} # GRNET in hex :-)
 : ${NFDHCPD_STATE_DIR:=@NFDHCPD_STATE_DIR@}
+: ${NFDHCPD_STATE_EXTRA:=}
 : ${GANETI_NIC_DIR:=@GANETI_NIC_DIR@}
 : ${BRIDGED_TAG:=bridged}
 : ${IP_LESS_ROUTED_TAG:=ip-less-routed}
@@ -299,9 +300,14 @@ function setup_nfdhcpd {
       local EUI64=''
     fi
 
-    # NFDHCPDFILECONTENTS may be set in the pre_ function
+    # NFDHCPD_STATE_EXTRA may be set in the pre_ function
+    if [ -z "$NFDHCPD_STATE_EXTRA" -a -n "$NFDHCPDFILECONTENTS" ]; then
+      log "Deprecated parameter NFDHCPDFILECONTENTS detected; please use NFDHCPD_STATE_EXTRA"
+      NFDHCPD_STATE_EXTRA="$NFDHCPDFILECONTENTS"
+    fi
+
     cat > "$NFDHCPD_STATE_DIR/$INTERFACE" <<EOF
-$NFDHCPDFILECONTENTS
+$NFDHCPD_STATE_EXTRA
 INDEV=$INDEV
 IP=$IP
 MAC=$MAC

@@ -441,6 +441,8 @@ one of them.
    based on an IPv6 prefix
  - ``NFDHCPD_STATE_DIR`` the path to store binding files for nfdhcpd
    (see `nfdhcpd`_)
+ - ``NFDHCPD_STATE_EXTRA`` extra (common) parameters inserted in the
+   nfdhcpd binding files (see `nfdhcpd`_)
  - ``GANETI_NIC_DIR`` dir to find NIC information in case of Xen (see
    :ref:`here <vif-custom>`)
  - ``*_TAG`` network tags related to supported setups (see :ref:`here

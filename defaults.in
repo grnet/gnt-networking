@@ -26,6 +26,9 @@
 # NFDHCPD_STATE_DIR: Directory that hosts the nfdhcpd binding files.
 # NFDHCPD_STATE_DIR=@NFDHCPD_STATE_DIR@
 
+# NFDHCPD_STATE_EXTRA: Extra (common) parameters inserted in the nfdhcpd binding files.
+# NFDHCPD_STATE_EXTRA=
+
 # GANETI_NIC_DIR: Directory to find NIC information in case of Xen
 # GANETI_NIC_DIR=@GANETI_NIC_DIR@
 
