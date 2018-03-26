@@ -1,7 +1,7 @@
 Source: gnt-networking
 Section: net
 Priority: extra
-Maintainer: George Kargiotakis <kargig@noc.grnet.gr>
+Maintainer: GRNET NOC servers team <servers@noc.grnet.gr>
 Build-Depends: debhelper (>= 7.0.50~), iproute2, iptables, arptables, ebtables,
                vzctl, dnsutils, bridge-utils, vlan, iputils-arping
 Standards-Version: 3.9.1
